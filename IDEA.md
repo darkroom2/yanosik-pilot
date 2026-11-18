@@ -32,3 +32,26 @@ Then power the nRF52 as needed
 3. Selecting the remote control’s operating logic: Determine which events the buttons should send to Home Assistant via the BTHome protocol (e.g., single click, double click, long press) and how the LEDs should indicate these events.
 4. Back-up the original firmware
 5. Compiling and flashing the batch: Preparing the code for PlatformIO, generating a .bin/.hex file, disabling the memory lock (APPROTECT) using the ESP32, and flashing the program to the nRF52832.
+
+## Original firmware archive
+
+Complete reads captured by the ESP32/nRF52 SWD setup:
+
+* [`dumps/full_uicr.bin`](dumps/full_uicr.bin) - UICR backup (4 KiB, SHA-256 `8cf25c59ad391780435765317039d2256cc618ff036a3c0847033c8d593e13dd`)
+* [`dumps/full_flash.bin`](dumps/full_flash.bin) - full internal flash backup (512 KiB, SHA-256 `ec3060bb5d8160296f1891a2d4d2db7882535f80779dd6fe611bf300a475d826`)
+
+APPROTECT unlock timing parameter: `Delay 2368`.
+
+## Python control workflow
+
+The ESP32 exposes machine-readable API routes for status, glitching, dumping, and restoring. Use the stdlib-only CLI on the host computer:
+
+```bash
+python tools/nrf52_swd.py --host swd.local status
+python tools/nrf52_swd.py --host swd.local glitch --delay 2368
+python tools/nrf52_swd.py --host swd.local dump --kind flash --output dumps/full_flash.bin
+python tools/nrf52_swd.py --host swd.local dump --kind uicr --output dumps/full_uicr.bin
+python tools/nrf52_swd.py --host swd.local restore --flash dumps/full_flash.bin --uicr dumps/full_uicr.bin --confirm
+```
+
+The restore command is destructive and therefore requires `--confirm`. It rejects wrong flash/UICR sizes and mismatched archive SHA-256 values before opening an HTTP connection.
