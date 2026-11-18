@@ -69,7 +69,7 @@ class NrfSwdClient:
             return {}
         try:
             return json.loads(body.decode("utf-8"))
-        except json.JSONDecodeError:
+        except (UnicodeDecodeError, json.JSONDecodeError):
             return body
 
     def status(self) -> dict:
@@ -83,6 +83,7 @@ class NrfSwdClient:
         power_off: int = 50,
         swd_wait: int = 100,
         width: int = 0,
+        timeout: float = 60.0,
     ) -> dict:
         fields = {
             "delay": delay,
@@ -93,7 +94,22 @@ class NrfSwdClient:
         }
         body = urllib.parse.urlencode(fields).encode("ascii")
         result = self._request("/api/v1/glitch", "POST", body)
-        return result if isinstance(result, dict) else {}
+        if not isinstance(result, dict):
+            return {}
+
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            status = self.status()
+            if status.get("glitch", {}).get("running") is False:
+                return result
+            time.sleep(0.5)
+
+        try:
+            disable = urllib.parse.urlencode({"state": "0"}).encode("ascii")
+            self._request("/set_glitcher", "POST", disable)
+        except NrfSwdError:
+            pass
+        raise NrfSwdError("glitch timed out")
 
     def start_dump(self, kind: Literal["flash", "uicr"]) -> dict:
         if kind not in ("flash", "uicr"):
@@ -105,6 +121,8 @@ class NrfSwdClient:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             status = self.status()
+            if status.get("last_error"):
+                raise NrfSwdError(status["last_error"])
             if not status.get("task", {}).get("active", False):
                 return status
             time.sleep(0.5)
@@ -182,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "status":
             print(json.dumps(client.status(), sort_keys=True))
         elif args.command == "glitch":
-            print(json.dumps(client.glitch(delay=args.delay), sort_keys=True))
+            print(json.dumps(client.glitch(delay=args.delay, timeout=args.timeout), sort_keys=True))
         elif args.command == "dump":
             client.start_dump(args.kind)
             client.wait_for_task(args.timeout)

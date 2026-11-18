@@ -47,10 +47,13 @@ def test_glitch_sends_default_2368_for_every_glitch_delay_field():
     client = NrfSwdClient("swd.local")
 
     with patch("tools.nrf52_swd.urllib.request.urlopen") as urlopen:
-        urlopen.return_value = io.BytesIO(b'{"ok":true,"started":true}')
+        urlopen.side_effect = [
+            io.BytesIO(b'{"ok":true,"started":true}'),
+            io.BytesIO(b'{"glitch":{"running":false},"task":{"active":false}}'),
+        ]
         client.glitch()
 
-    request = urlopen.call_args.args[0]
+    request = urlopen.call_args_list[0].args[0]
     body = request.data.decode()
     assert "delay=2368" in body
     assert "delay_end=2368" in body
@@ -67,6 +70,53 @@ def test_dump_download_writes_bytes_and_reports_sha256(tmp_path):
 
     assert output.read_bytes() == payload
     assert hashlib.sha256(payload).hexdigest() == client.sha256(output)
+
+
+def test_dump_download_accepts_non_utf8_binary_payload(tmp_path):
+    client = NrfSwdClient("swd.local")
+    payload = b"\xff\xfe" + b"x" * (4 * 1024 - 2)
+    output = tmp_path / "full_uicr.bin"
+
+    with patch("tools.nrf52_swd.urllib.request.urlopen") as urlopen:
+        urlopen.return_value = io.BytesIO(payload)
+        client.download("uicr", output)
+
+    assert output.read_bytes() == payload
+
+
+def test_wait_for_task_rejects_restore_last_error():
+    client = NrfSwdClient("swd.local")
+
+    with patch.object(
+        client,
+        "status",
+        return_value={
+            "task": {"active": False},
+            "last_error": "flash write failed",
+        },
+    ):
+        with pytest.raises(NrfSwdError) as exc:
+            client.wait_for_task(timeout=1.0)
+
+    assert "flash write failed" in str(exc.value)
+
+
+def test_glitch_times_out_and_disables_glitcher():
+    client = NrfSwdClient("swd.local")
+
+    with patch.object(
+        client,
+        "_request",
+        side_effect=[
+            {"ok": True, "started": True},
+            {"state": "glitch"},
+            {"ok": True},
+        ],
+    ):
+        with pytest.raises(NrfSwdError) as exc:
+            client.glitch(timeout=0.01)
+
+    assert "timed out" in str(exc.value)
 
 
 @pytest.mark.parametrize(
