@@ -151,3 +151,65 @@ def test_timeout_response_raises_nrf_swd_error():
             client.status()
 
     assert "timed out" in str(exc.value)
+
+
+def test_erase_flash_requires_confirmation_before_http():
+    client = NrfSwdClient("swd.local")
+
+    with patch("tools.nrf52_swd.urllib.request.urlopen") as urlopen:
+        with pytest.raises(NrfSwdError, match="erase requires"):
+            client.erase_flash(confirm=False)
+
+    urlopen.assert_not_called()
+
+
+def test_erase_flash_posts_erase_all_after_confirmation():
+    client = NrfSwdClient("swd.local")
+
+    with patch("tools.nrf52_swd.urllib.request.urlopen") as urlopen:
+        urlopen.side_effect = [
+            io.BytesIO(b'{"connected":2,"glitch":{"running":false},"task":{"active":false}}'),
+            io.BytesIO(b"Ok"),
+        ]
+        client.erase_flash(confirm=True)
+
+    request = urlopen.call_args.args[0]
+    assert request.full_url.endswith("/flash_cmd")
+    assert request.data == b"cmd=erase_all"
+
+
+def test_upload_hex_rejects_missing_and_wrong_extension_before_http(tmp_path):
+    client = NrfSwdClient("swd.local")
+
+    with patch("tools.nrf52_swd.urllib.request.urlopen") as urlopen:
+        with pytest.raises(ValueError, match="HEX file does not exist"):
+            client.upload_hex(tmp_path / "missing.hex")
+        with pytest.raises(ValueError, match="firmware file must be HEX"):
+            client.upload_hex(tmp_path / "firmware.bin")
+
+    urlopen.assert_not_called()
+
+
+def test_upload_hex_posts_multipart_payload_when_unlocked(tmp_path):
+    client = NrfSwdClient("swd.local")
+    hex_file = tmp_path / "firmware.hex"
+    hex_file.write_text(":00000001FF\n", encoding="ascii")
+
+    with patch("tools.nrf52_swd.urllib.request.urlopen") as urlopen:
+        urlopen.side_effect = [
+            io.BytesIO(b'{"connected":2,"task":{"active":false}}'),
+            io.BytesIO(b"Upload complete!"),
+        ]
+        with patch.object(client, "wait_for_task", return_value={"task": {"active": False}}) as wait:
+            client.upload_hex(hex_file, timeout=12.0)
+        wait.assert_called_once_with(12.0)
+
+    status_request, upload_request = [call.args[0] for call in urlopen.call_args_list]
+    assert status_request.full_url.endswith("/api/v1/status")
+    assert upload_request.full_url.endswith("/flash_file_direct")
+    assert upload_request.headers["Content-type"].startswith("multipart/form-data; boundary=")
+    body = upload_request.data
+    assert b'name="filename"' in body
+    assert b"firmware.hex" in body
+    assert b'name="flash_up_file_offset"' in body
+    assert b"0" in body

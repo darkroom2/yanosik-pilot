@@ -8,6 +8,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from pathlib import Path
 from typing import Literal
 
@@ -161,6 +162,65 @@ class NrfSwdClient:
 
     def sha256(self, path: Path) -> str:
         return sha256_file(path)
+
+    def erase_flash(self, confirm: bool) -> dict:
+        if not confirm:
+            raise NrfSwdError("erase requires --confirm")
+
+        status = self.status()
+        if status.get("connected") == 1:
+            raise NrfSwdError("nRF is locked")
+        if status.get("connected") == 0:
+            raise NrfSwdError("nRF not connected")
+        if status.get("glitch", {}).get("running"):
+            raise NrfSwdError("glitcher is running")
+
+        body = urllib.parse.urlencode({"cmd": "erase_all"}).encode("ascii")
+        result = self._request("/flash_cmd", "POST", body)
+        return result if isinstance(result, dict) else {"ok": True}
+
+    def upload_hex(self, hex_file: Path, timeout: float = 60.0) -> dict:
+        if hex_file.suffix.lower() != ".hex":
+            raise ValueError("firmware file must be HEX")
+        if not hex_file.is_file():
+            raise ValueError(f"HEX file does not exist: {hex_file}")
+
+        status = self.status()
+        if status.get("connected") != 2:
+            if status.get("connected") == 1:
+                raise NrfSwdError("nRF is locked")
+            raise NrfSwdError("nRF not connected or target is locked")
+        if status.get("glitch", {}).get("running"):
+            raise NrfSwdError("glitcher is running")
+
+        data = hex_file.read_bytes()
+        boundary = f"----nrf52-{uuid.uuid4().hex}"
+        parts = [
+            (
+                f"--{boundary}\r\n"
+                'Content-Disposition: form-data; name="flash_up_file_offset"\r\n\r\n'
+                "0\r\n"
+            ).encode("ascii"),
+            (
+                f"--{boundary}\r\n"
+                'Content-Disposition: form-data; name="filename"; filename="firmware.hex"\r\n'
+                "Content-Type: application/octet-stream\r\n\r\n"
+            ).encode("ascii"),
+            data,
+            b"\r\n",
+            f"--{boundary}--\r\n".encode("ascii"),
+        ]
+        body = b"".join(parts)
+        result = self._request(
+            "/flash_file_direct",
+            "POST",
+            body,
+            f'multipart/form-data; boundary="{boundary}"',
+        )
+        status = self.wait_for_task(timeout)
+        if status.get("last_error"):
+            raise NrfSwdError(status["last_error"])
+        return result if isinstance(result, dict) else {"ok": True}
 
 
 def build_parser() -> argparse.ArgumentParser:

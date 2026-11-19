@@ -28,7 +28,17 @@ Then power the nRF52 as needed
 • Development Environment: Visual Studio Code + PlatformIO CLI for compiling software for the remote control and the programmer.
 
 1. Upload the ESP32_nRF52_SWD project to the ESP32
-2. Distinguish between the colors on pins 21 and 22: Quickly test in practice (in some smoke test program) which pin (P0.18 or P0.19) lights up the blue LED and which lights up the green one.
+2. Distinguish between the colors on pins 21 and 22:
+   - Keep `dumps/full_flash.bin` (512 KiB) and `dumps/full_uicr.bin` (4 KiB)
+     available. The LED script verifies their known SHA-256 values before any
+     erase or upload.
+   - Build and flash the temporary fixture only with explicit confirmation:
+     `python tools/led_identify.py run --host swd.local --confirm`
+   - Observe P0.18 and P0.19 separately. Do not assign a color in source code
+     until one complete sequence has been repeated and both channels are
+     visibly distinct. Record the result with `--output mapping.json`.
+   - Restore the original archive only with explicit confirmation:
+     `python tools/led_identify.py restore --host swd.local --confirm`
 3. Selecting the remote control’s operating logic: Determine which events the buttons should send to Home Assistant via the BTHome protocol (e.g., single click, double click, long press) and how the LEDs should indicate these events.
 4. Back-up the original firmware
 5. Compiling and flashing the batch: Preparing the code for PlatformIO, generating a .bin/.hex file, disabling the memory lock (APPROTECT) using the ESP32, and flashing the program to the nRF52832.
