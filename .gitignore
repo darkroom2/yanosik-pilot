@@ -11,10 +11,3 @@ __pycache__/
 **/.clang_complete
 **/.gcc-flags.json
 **/.vscode/
-
-# Generated local artifacts
-led-mapping.json
-led_smoke_test/.pio/
-
-# Firmware backups and unlocked UICR copies
-dumps/*.bin
