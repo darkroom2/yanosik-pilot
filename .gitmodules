@@ -1,0 +1,3 @@
+[submodule "ESP32_nRF52_SWD"]
+	path = ESP32_nRF52_SWD
+	url = git@github.com:darkroom2/ESP32_nRF52_SWD.git
