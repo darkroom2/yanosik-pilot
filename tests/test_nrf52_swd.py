@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from tools.nrf52_swd import NrfSwdClient, NrfSwdError, validate_dump
+from tools.nrf52_swd import NrfSwdClient, NrfSwdError, main, validate_dump
 
 
 def test_validate_dump_accepts_flash_size_and_rejects_one_byte_short(tmp_path):
@@ -101,6 +101,21 @@ def test_wait_for_task_rejects_restore_last_error():
     assert "flash write failed" in str(exc.value)
 
 
+def test_wait_for_task_reports_progress_and_requires_complete_percent(capsys):
+    client = NrfSwdClient("swd.local")
+    statuses = [
+        {"task": {"active": True, "percent": 25}},
+        {"task": {"active": True, "percent": 50}},
+        {"task": {"active": False, "percent": 100}},
+    ]
+
+    with patch.object(client, "status", side_effect=statuses):
+        status = client.wait_for_task(timeout=2.0, label="flash", require_percent=True)
+
+    assert status["task"]["percent"] == 100
+    assert "flash 25%" in capsys.readouterr().out
+
+
 def test_glitch_times_out_and_disables_glitcher():
     client = NrfSwdClient("swd.local")
 
@@ -176,6 +191,49 @@ def test_erase_flash_posts_erase_all_after_confirmation():
     request = urlopen.call_args.args[0]
     assert request.full_url.endswith("/flash_cmd")
     assert request.data == b"cmd=erase_all"
+
+
+def test_restore_command_erases_once_before_flash_and_uicr(tmp_path):
+    flash = tmp_path / "full_flash.bin"
+    uicr = tmp_path / "full_uicr.bin"
+    flash.write_bytes(b"x" * (512 * 1024))
+    uicr.write_bytes(b"u" * (4 * 1024))
+    calls = []
+
+    class FakeClient:
+        def __init__(self, host, timeout):
+            calls.append(("client", host, timeout))
+
+        def erase_flash(self, confirm):
+            calls.append(("erase", confirm))
+
+        def restore(self, kind, path):
+            calls.append(("restore", kind, path.name))
+
+        def wait_for_task(self, timeout, label=None, require_percent=False):
+            calls.append(("wait", timeout))
+
+    with patch("tools.nrf52_swd.NrfSwdClient", FakeClient):
+        result = main([
+            "--host",
+            "swd.local",
+            "restore",
+            "--flash",
+            str(flash),
+            "--uicr",
+            str(uicr),
+            "--confirm",
+        ])
+
+    assert result == 0
+    assert calls.count(("erase", True)) == 1
+    assert calls.index(("erase", True)) < calls.index(("restore", "flash", flash.name))
+    waits = [i for i, call in enumerate(calls) if call == ("wait", 60.0)]
+    erase_index = calls.index(("erase", True))
+    flash_index = calls.index(("restore", "flash", flash.name))
+    uicr_index = calls.index(("restore", "uicr", uicr.name))
+    assert len(waits) == 3
+    assert erase_index < waits[0] < flash_index < waits[1] < uicr_index < waits[2]
 
 
 def test_upload_hex_rejects_missing_and_wrong_extension_before_http(tmp_path):

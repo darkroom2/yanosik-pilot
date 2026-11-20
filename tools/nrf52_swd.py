@@ -118,13 +118,28 @@ class NrfSwdClient:
         result = self._request(f"/api/v1/dump/{kind}", "POST", b"")
         return result if isinstance(result, dict) else {}
 
-    def wait_for_task(self, timeout: float = 60.0) -> dict:
+    def wait_for_task(
+        self,
+        timeout: float = 60.0,
+        label: str | None = None,
+        require_percent: bool = False,
+    ) -> dict:
         deadline = time.monotonic() + timeout
+        last_percent = None
         while time.monotonic() < deadline:
             status = self.status()
             if status.get("last_error"):
                 raise NrfSwdError(status["last_error"])
-            if not status.get("task", {}).get("active", False):
+            task = status.get("task", {})
+            active = task.get("active", False)
+            percent = task.get("percent")
+            if label and isinstance(percent, int) and percent != last_percent:
+                print(f"{label} {percent}%", flush=True)
+                last_percent = percent
+            if not active:
+                if require_percent and percent != 100:
+                    time.sleep(0.1)
+                    continue
                 return status
             time.sleep(0.5)
         raise NrfSwdError("operation timed out")
@@ -270,10 +285,18 @@ def main(argv: list[str] | None = None) -> int:
                 raise NrfSwdError("restore requires --confirm")
             if not args.flash or not args.uicr:
                 raise NrfSwdError("restore requires --flash and --uicr")
+            print("erase 0%", flush=True)
+            client.erase_flash(confirm=True)
+            client.wait_for_task(args.timeout, label="erase")
+            print("erase 100%", flush=True)
+            print("flash 0%", flush=True)
             client.restore("flash", args.flash)
-            client.wait_for_task(args.timeout)
+            client.wait_for_task(args.timeout, label="flash", require_percent=True)
+            print("flash 100%", flush=True)
+            print("uicr 0%", flush=True)
             client.restore("uicr", args.uicr)
-            client.wait_for_task(args.timeout)
+            client.wait_for_task(args.timeout, label="uicr", require_percent=True)
+            print("uicr 100%", flush=True)
     except (NrfSwdError, ValueError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

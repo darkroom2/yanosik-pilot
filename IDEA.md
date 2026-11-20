@@ -6,6 +6,7 @@ I have a remote control and want to modify it so I can use it to control devices
     • Button #2: Pin 17 → P0.14 (short to GND, requires INPUT_PULLUP).
 	• Red LED (510 Ω): Pin 20 → P0.17 (common anode, lights up at LOW).
     • Blue/Green LED (100 Ω): Pin 21 → P0.18 and Pin 22 → P0.19 (common anode, lights up at LOW).
+    • Identified mapping: P0.19 = blue; P0.18 = not yet confirmed.
 • Programmer: You have an ESP32 NodeMCU and N-Channel MOSFET, which you can turn into a programmer by uploading the ESP32_nRF52_SWD project at https://github.com/atc1441/ESP32_nRF52_SWD
 
 ESP32_nRF52_SWD README.md excerpt:

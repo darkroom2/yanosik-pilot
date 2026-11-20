@@ -27,6 +27,8 @@ P0.18 pulses first for 1000 ms, then P0.19 pulses separately for 1000 ms.
 P0.17 remains off. Repeat the sequence once and enter `blue`, `green`, or
 `unknown` for each pin. Use `unknown` if the observation is inconclusive.
 
+Current observation: P0.19 is blue. P0.18 is not yet confirmed.
+
 To save the observation locally:
 
 ```bash

@@ -73,13 +73,18 @@ def restore_archives(
 ) -> None:
     validate_backups(flash, uicr)
     try:
-        client.restore("flash", flash)
+        client.erase_flash(confirm=True)
         client.wait_for_task(timeout)
+    except (NrfSwdError, ValueError, OSError) as exc:
+        raise NrfSwdError(f"erase before restore failed: {exc}") from exc
+    try:
+        client.restore("flash", flash)
+        client.wait_for_task(timeout, label="flash", require_percent=True)
     except (NrfSwdError, ValueError, OSError) as exc:
         raise NrfSwdError(f"flash restore failed: {exc}") from exc
     try:
         client.restore("uicr", uicr)
-        client.wait_for_task(timeout)
+        client.wait_for_task(timeout, label="uicr", require_percent=True)
     except (NrfSwdError, ValueError, OSError) as exc:
         raise NrfSwdError(f"uicr restore failed: {exc}") from exc
 

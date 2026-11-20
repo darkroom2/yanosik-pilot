@@ -144,10 +144,13 @@ def test_restore_confirm_restores_flash_then_uicr_and_waits(tmp_path):
         def __init__(self, host, timeout):
             calls.append(("client", host, timeout))
 
+        def erase_flash(self, confirm):
+            calls.append(("erase", confirm))
+
         def restore(self, kind, path):
             calls.append(("restore", kind, path.name))
 
-        def wait_for_task(self, timeout):
+        def wait_for_task(self, timeout, label=None, require_percent=False):
             calls.append(("wait", timeout))
 
     with patch("tools.led_identify.validate_backups"), patch(
@@ -164,9 +167,14 @@ def test_restore_confirm_restores_flash_then_uicr_and_waits(tmp_path):
             str(uicr),
         ]) == 0
 
-    assert calls.count(("wait", 60.0)) == 2
-    assert calls.index(("restore", "flash", flash.name)) < calls.index(("wait", 60.0))
-    assert calls.index(("wait", 60.0)) < calls.index(("restore", "uicr", uicr.name))
+    assert calls.count(("erase", True)) == 1
+    assert calls.index(("erase", True)) < calls.index(("restore", "flash", flash.name))
+    waits = [i for i, call in enumerate(calls) if call == ("wait", 60.0)]
+    assert len(waits) == 3
+    erase_index = calls.index(("erase", True))
+    flash_index = calls.index(("restore", "flash", flash.name))
+    uicr_index = calls.index(("restore", "uicr", uicr.name))
+    assert erase_index < waits[0] < flash_index < waits[1] < uicr_index < waits[2]
 
 
 def test_restore_without_confirm_has_no_side_effects(tmp_path):
@@ -209,6 +217,12 @@ def test_restore_archives_reports_flash_region(tmp_path):
     uicr = tmp_path / "full_uicr.bin"
 
     class FakeClient:
+        def erase_flash(self, confirm):
+            pass
+
+        def wait_for_task(self, timeout):
+            pass
+
         def restore(self, region, path):
             raise NrfSwdError("flash write failed")
 
