@@ -24,11 +24,30 @@ Then connect or reconnect the ESP32 and verify the USB port:
 uv run pio device list
 ```
 
-Upload firmware from the submodule directory:
+Upload the stock ESP32_nRF52_SWD firmware from the repository directory:
 
 ```powershell
-Set-Location .\ESP32_nRF52_SWD
-uv run pio run -e ESP32_nRF52_SWD -t upload --upload-port COM3
+uv run pio run --project-dir tools/ESP32_nRF52_SWD -e ESP32_nRF52_SWD -t upload --upload-port COM3
 ```
 
 Replace `COM3` with the port reported by `uv run pio device list`.
+
+## Podłączenie programatora ESP32 do płytki pilota
+
+Złącze programatora nie ma podpisanych pinów. Znana jest jedynie kolejność:
+ostatni pin ma numer **4** i jest to **GND**. Piny numeruj od tego samego początku
+złącza i nie odwracaj jego orientacji:
+
+| Numer pinu złącza | Sygnał nRF52 | Pin ESP32 LILYGO T5 V2.3.1 |
+|---|---|---|
+| 1 | SWDCLK | GPIO 21 (`21`) |
+| 2 | SWDIO | GPIO 19 (`19`) |
+| 3 | VDD 3.3 V | `3V3` |
+| 4 | GND | `GND` |
+
+Podłącz także wspólną masę z pinu 4 do ESP32 `GND`.
+
+- Zasilanie 3.3 V z pinu 3 podłączaj tylko wtedy, gdy płytka nRF52 nie ma
+  własnego zasilania, np. baterii.
+- Jeśli nRF52 jest zasilany osobno, pozostaw pin 3 złącza nRF52 niepodłączony.
+- Nie podłączaj 5 V ani innych napięć większych niż 3.3 V do płytki ESP32.
