@@ -1,68 +1,57 @@
-I have a remote control and want to modify it so I can use it to control devices in my Home Assistant. It is essential to preserve the original firmware from this remote to revert it to its factory state!!!
+# Pomysł projektu
 
-• Remote hardware: nRF52832 chip (QFN48) with an external 32.000 MHz crystal and RF components (all functional and necessary).
-• Pin mapping (physical pin → GPIO port):
-    • Button #1: Pin 16 → P0.13 (short to GND, requires INPUT_PULLUP).
-    • Button #2: Pin 17 → P0.14 (short to GND, requires INPUT_PULLUP).
-	• Red LED (510 Ω): Pin 20 → P0.17 (common anode, lights up at LOW).
-    • Blue/Green LED (100 Ω): Pin 21 → P0.18 and Pin 22 → P0.19 (common anode, lights up at LOW).
-    • Identified mapping: P0.18 = green; P0.19 = blue.
-• Programmer: You have an ESP32 NodeMCU and N-Channel MOSFET, which you can turn into a programmer by uploading the ESP32_nRF52_SWD project at https://github.com/atc1441/ESP32_nRF52_SWD
+Pilot Yanosik ma zostać przekształcony w bezprzewodowy przycisk sterujący
+urządzeniami w Home Assistant. Do komunikacji ma być wykorzystywany nRF52832
+oraz protokół BTHome.
 
-ESP32_nRF52_SWD README.md excerpt:
-```
-This software makes it possible to Read and Write the internal Flash of the Nordic nRF52 series with an ESP32 using the SWD interface. A tool to exploit the APPROTECT vulnerability is included as well.
+## Najważniejsze wymagania
 
-To flash an nRF52 connect the following:
-nRF52 SWDCLK to ESP32 GPIO 21
-nRF52 SWDIO to ESP32 GPIO 19
-nRF52 GND to ESP32 GND to N-Channel MOSFET GND (Optional: O-scope GND Clips)
-Then power the nRF52 as needed
+- Zachować oryginalne firmware i UICR pilota, aby możliwy był powrót do stanu
+  fabrycznego.
+- Wykorzystać istniejący nRF52832, przyciski, diody, buzzer oraz akcelerometr
+  LIS2DH.
+- Zidentyfikować pozostałe nieznane elementy płytki oraz ich połączenia.
+- Przesłać zdarzenia przycisków do Home Assistant przez BTHome.
+- Wprowadzić czytelną sygnalizację stanów i błędów diodami oraz buzzerem.
+- Traktować odblokowanie, kasowanie i programowanie pamięci jako operacje
+  wymagające świadomego potwierdzenia.
 
-To bypass the Readout protection (APPROTECT) of an nRF52 connect all of the above and the following:
-nRF52 3.3V Power VDD to ESP32 GPIO 22 (Optional: O-scope Channel 2 Probe)
-N-Channel MOSFET PWM+ to ESP32 GPIO 5 (as shown)
-N-Channel MOSFET VOUT- to nRF52 DEC1 (as shown) (Optional: O-scope Channel 1 Probe)
-Then power the nRF52 as needed
-```
+## Zakres prac
 
-• Development Environment: Visual Studio Code + PlatformIO CLI for compiling software for the remote control and the programmer.
+1. Uwierzytelnić i zabezpieczyć pełną kopię pamięci fabrycznej.
+2. Zidentyfikować pinout przycisków, diod, buzzera i akcelerometru.
+3. Ustalić logikę zdarzeń przycisków:
+   - pojedyncze kliknięcie,
+   - podwójne kliknięcie,
+   - przytrzymanie,
+   - reakcje diod i buzzera.
+4. Przygotować oprogramowanie nRF52832 w środowisku VS Code i PlatformIO.
+5. Włączyć transmisję danych przez BTHome do Home Assistant.
+6. Usunąć blokadę pamięci APPROTECT, zaprogramować płytkę i przeprowadzić testy.
+7. Zachować możliwość przywrócenia oryginalnych danych z archiwum.
 
-1. Upload the ESP32_nRF52_SWD project to the ESP32
-2. Distinguish between the colors on pins 21 and 22:
-   - Keep `dumps/full_flash.bin` (512 KiB) and `dumps/full_uicr.bin` (4 KiB)
-     available. The LED script verifies their known SHA-256 values before any
-     erase or upload.
-   - Build and flash the temporary fixture only with explicit confirmation:
-     `python tools/led_identify.py run --host swd.local --confirm`
-   - Observe P0.18 and P0.19 separately. Do not assign a color in source code
-     until one complete sequence has been repeated and both channels are
-     visibly distinct. Record the result with `--output mapping.json`.
-   - Restore the original archive only with explicit confirmation:
-     `python tools/led_identify.py restore --host swd.local --confirm`
-3. Selecting the remote control’s operating logic: Determine which events the buttons should send to Home Assistant via the BTHome protocol (e.g., single click, double click, long press) and how the LEDs should indicate these events.
-4. Back-up the original firmware
-5. Compiling and flashing the batch: Preparing the code for PlatformIO, generating a .bin/.hex file, disabling the memory lock (APPROTECT) using the ESP32, and flashing the program to the nRF52832.
+## Wykorzystanie akcelerometru (LIS2DH)
 
-## Original firmware archive
+Wbudowany 3-osiowy akcelerometr **LIS2DH** pozwala rozszerzyć funkcje pilota
+poza same przyciski oraz znacząco ograniczyć zużycie energii:
 
-Complete reads captured by the ESP32/nRF52 SWD setup:
+- **Oszczędzanie energii (Wake-on-Motion)** – usypianie nRF52832 w głębokim śnie
+  i wybudzanie przerwaniem z LIS2DH po wykryciu ruchu lub podniesienia pilota,
+  co wydłuża czas pracy na baterii CR2450.
+- **Dodatkowe gesty (Shake / Tap)** – rozpoznawanie potrząśnięcia lub
+  stuknięcia jako osobnych zdarzeń BTHome w Home Assistant (np. tryb nocny lub
+  „wyłącz wszystko”).
+- **Wykrywanie orientacji (Flip / Tilt)** – odwrócenie pilota do góry nogami
+  jako szybkie wyciszenie lub przełączenie trybu pracy.
+- **Zdarzenie ruchu w Home Assistant** – wysyłanie informacji o poruszeniu
+  pilota jako wyzwalacza do automatyzacji (np. obecność lub zabranie pilota).
 
-* [`dumps/full_uicr.bin`](dumps/full_uicr.bin) - UICR backup (4 KiB, SHA-256 `8cf25c59ad391780435765317039d2256cc618ff036a3c0847033c8d593e13dd`)
-* [`dumps/full_flash.bin`](dumps/full_flash.bin) - full internal flash backup (512 KiB, SHA-256 `ec3060bb5d8160296f1891a2d4d2db7882535f80779dd6fe611bf300a475d826`)
+## Wybrany sprzęt i narzędzia
 
-APPROTECT unlock timing parameter: `Delay 2368`.
+- Mikrokontroler: Nordic nRF52832 w obudowie QFN48.
+- Programator: ESP32 NodeMCU + MOSFET N-channel i projekt `ESP32_nRF52_SWD`.
+- Środowisko: VS Code, PlatformIO CLI i Python.
 
-## Python control workflow
-
-The ESP32 exposes machine-readable API routes for status, glitching, dumping, and restoring. Use the stdlib-only CLI on the host computer:
-
-```bash
-python tools/nrf52_swd.py --host swd.local status
-python tools/nrf52_swd.py --host swd.local glitch --delay 2368
-python tools/nrf52_swd.py --host swd.local dump --kind flash --output dumps/full_flash.bin
-python tools/nrf52_swd.py --host swd.local dump --kind uicr --output dumps/full_uicr.bin
-python tools/nrf52_swd.py --host swd.local restore --flash dumps/full_flash.bin --uicr dumps/full_uicr.bin --confirm
-```
-
-The restore command is destructive and therefore requires `--confirm`. It rejects wrong flash/UICR sizes and mismatched archive SHA-256 values before opening an HTTP connection.
+Szczegółowy opis sprzętu znajduje się w [README.md](README.md). Instrukcje
+programowania, kopii zapasowej i przywracania firmware są również opisane
+w `README.md`.
