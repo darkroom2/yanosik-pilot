@@ -19,6 +19,11 @@
 
 - [ ] Zidentyfikować piny buzzera i układu podbijania napięcia.
 - [ ] Dodać potwierdzony wynik do tabeli mapowania pinów.
+- [ ] Dodać dwukierunkową sygnalizację stanów przez buzzer i diodę/LED:
+  zdarzenia wychodzące z pilota do Home Assistant oraz potwierdzenia lub stany
+  przychodzące z Home Assistant lub innych systemów.
+- [ ] Ustalić priorytety i zachowania podczas konfliktu sygnałów, np. alarm,
+  potwierdzenie, utrata połączenia i tryb uśpienia.
 
 ## Firmware i narzędzia
 
@@ -26,3 +31,26 @@
 - [ ] Dodawać przykłady poleceń zachowujące zgodność składni między Linuxem i
   PowerShell.
 - [ ] Zweryfikować instrukcje przywracania flash i UICR na rzeczywistym urządzeniu.
+
+## NFC
+
+- [ ] Zwizualizować płytkę od strony komponentów i ścieżek, aby sprawdzić
+  obecność cewki NFC oraz rezystorów/mostków przy P0.09 i P0.10.
+- [ ] Odczytać UICR `NFCPINS` i potwierdzić, czy piny 9 i 10 są skonfigurowane
+  jako interfejs NFC, czy GPIO.
+- [ ] Jeśli cewki nie ma, ocenić dostępne miejsce i możliwość dodania zewnętrznej
+  anteny NFC-A ze ścieżkami NFC1/NFC2 oraz elementami dopasowującymi zgodnymi
+  z referencyjnym układem Nordic.
+- [ ] Po dodaniu i zaprojektowaniu anteny zweryfikować odczyt w telefonie,
+  wake-on-field oraz, jeśli używany, Touch-to-Pair.
+
+## ANT+
+
+- [ ] Potwierdzić, że docelowy wariant firmware i nRF52832 umożliwiają wybranie
+  SoftDevice/stacku ANT przez obsługiwane SDK i narzędzia.
+- [ ] Sprawdzić licencję, wymagania EULA i klucz licencyjny przed komercyjnym
+  użyciem ANT/ANT+.
+- [ ] Zbudować i uruchomić minimalny test transmisji i odbioru ANT na pilotach
+  lub kompatybilnym urządzeniu testowym.
+- [ ] Jeśli wymagane równoczesne BLE i ANT, zweryfikować obsługę wariantu
+  concurrent SoftDevice oraz zachowanie zużycia energii.

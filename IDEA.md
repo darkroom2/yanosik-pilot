@@ -11,7 +11,20 @@ oraz protokół BTHome.
 - Wykorzystać istniejący nRF52832, przyciski, diody, buzzer oraz akcelerometr
   LIS2DH.
 - Zidentyfikować pozostałe nieznane elementy płytki oraz ich połączenia.
+- Sprawdzić obwód NFC-A: istnienie cewki i połączeń NFC1/NFC2 do P0.09/P0.10,
+  konfigurację UICR `NFCPINS` oraz możliwość łatwego dodania zewnętrznej anteny
+  NFC.
+- Sprawdzić możliwość wykorzystania ANT+: wymagany SoftDevice/stack ANT,
+  kompatybilne profile urządzeń, licencjonowanie i wybór profilu komunikacji
+  równoległej z BLE.
 - Przesłać zdarzenia przycisków do Home Assistant przez BTHome.
+- Zaimplementować dwukierunkową komunikację z Home Assistant i innymi
+  urządzeniami lub systemami: przyciski mogą zgłaszać zdarzenia, a system
+  zwrotnie może przekazywać stany do pilota.
+- Reprezentować przychodzące zdarzenia i stany czytelnym sygnałem lokalnym,
+  np. kolorami i miganiem diody, dźwiękami lub sekwencjami buzzera oraz innymi
+  dostępnymi elementami wskazującymi. Szczegóły komunikatów i priorytety mają
+  być konfigurowalne i nie mogą maskować ważnych alarmów.
 - Wprowadzić czytelną sygnalizację stanów i błędów diodami oraz buzzerem.
 - Traktować odblokowanie, kasowanie i programowanie pamięci jako operacje
   wymagające świadomego potwierdzenia.

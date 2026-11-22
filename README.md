@@ -17,7 +17,7 @@ Projekt zawiera narzędzia do:
 - [Przygotowanie środowiska](#przygotowanie-środowiska)
 - [Podłączenie programatora ESP32](#podłączenie-programatora-esp32)
 - [Praca z firmware nRF52](#praca-z-firmware-nrf52)
-- [Firmware blinker](#firmware-blinker)
+- [Firmware nRF52 i test Blinker](#firmware-nrf52-i-test-blinker)
 - [Test mapowania sprzętu](#test-mapowania-sprzętu)
 - [Planowane prace](#planowane-prace)
 - [Archiwum fabrycznego firmware](#archiwum-fabrycznego-firmware)
@@ -68,6 +68,12 @@ zarządzanie poborem energii.
   komunikacyjnej i sygnału wybudzenia.
 - Nie potwierdzono ostatecznej funkcji fizycznych pinów przycisków poza ich
   przypisaniem do P0.13 i P0.14.
+- Nie potwierdzono istnienia obwodu NFC ani cewki NFC na płytce. nRF52832 ma
+  wejścia NFC1/NFC2 na P0.09 i P0.10, ale ich obecność zależy od połączeń PCB
+  i konfiguracji UICR `NFCPINS`.
+- Nie zweryfikowano obsługi ANT+. nRF52832 ma radio zdolne do pracy z
+  protokołem ANT, jednak potrzebny jest oddzielny SoftDevice/stack ANT i licencja
+  użycia oraz aktualny firmware do testu.
 
 ## Przygotowanie środowiska
 
@@ -93,6 +99,23 @@ uv run pio run --project-dir tools/ESP32_nRF52_SWD -e ESP32_nRF52_SWD -t upload 
 
 Zastąp `COM3` portem zwróconym przez `uv run pio device list`.
 
+### Monitor portu szeregowego ESP32
+
+Otwórz monitor, wskazując port i prędkość używaną przez firmware:
+
+```powershell
+uv run pio device monitor --port COM3 --baud 115200
+```
+
+Na Linuxie ścieżka portu może mieć postać `/dev/ttyUSB0`. Z monitora wyjdziesz
+skrótami `Ctrl+C`.
+
+> [!WARNING]
+> Uruchomienie monitora może zresetować ESP32 przez linię DTR lub inne
+> ustawienia adaptera USB-UART. Restart przerywa trwające zadania SWD, dlatego
+> nie uruchamiaj monitora podczas programowania, kasowania ani zrzutu pamięci
+> nRF52.
+
 Jeśli system nie przypisuje portu urządzeniu
 `CP2102 USB to UART Bridge Controller`, zainstaluj oficjalny CP210x Universal
 Windows Driver. Uruchom PowerShell jako administrator i wykonaj:
@@ -115,12 +138,19 @@ Złącze programatora nie ma podpisanych pinów. Znana jest tylko kolejność:
 ostatni pin ma numer **4** i jest sygnałem **GND**. Numery piny przypisuj
 zaczynając od tego samego końca złącza i nie odwracaj jego orientacji.
 
-| Numer pinu złącza | Sygnał nRF52 | Pin ESP32 LILYGO T5 V2.3.1 |
+| Numer pinu złącza | Sygnał nRF52 | Domyślny pin ESP32 |
 |---|---|---|
 | 1 | SWDCLK | GPIO 21 (`21`) |
 | 2 | SWDIO | GPIO 19 (`19`) |
 | 3 | VDD 3.3 V | `3V3` |
 | 4 | GND | `GND` |
+
+Piny ESP32 powyżej są domyślnymi ustawieniami środowiska
+`ESP32_nRF52_SWD` z `tools/ESP32_nRF52_SWD/platformio.ini`. Są one
+konfigurowalne build flagami i mogą być inne na alternatywnych płytkach ESP32
+lub w innym środowisku PlatformIO. Płytkę ESP32 należy traktować jako
+uniwersalny programator SWD; nazwa obudowy, typ Wi-Fi lub procesor płytki nie
+jest częścią protokołu obsługi nRF52.
 
 Podłącz dodatkowo wspólną masę z pinu 4 złącza do pinu `GND` modułu ESP32.
 
@@ -143,15 +173,55 @@ W tym projekcie komputer komunikuje się z programatorem ESP32, a ESP32 łączy 
 z nRF52 przez SWD. Płytka pilota nRF52 nie jest podłączana bezpośrednio do
 komputera ani wykrywana przez PlatformIO jako urządzenie programujące.
 
-Środowisko `nrf52_dk` w `firmware/blinker/platformio.ini` służy do kompilacji
-firmware i wyboru wariantu Arduino. Nie oznacza, że do komputera jest podłączona
-płytka Nordic nRF52-DK. Standardowe `pio run -t upload` dla tego środowiska
-oczekuje programatora J-Link; do wgrania firmware na pilot użyj ESP32/SWD.
+Środowisko `nrf52_dk` z `firmware/blinker/platformio.ini` jest tylko jednym
+przykładem wariantu PlatformIO używanego do kompilacji nRF52. W repozytorium
+mogą istnieć inne katalogi firmware i alternatywne pliki HEX. Nazwa środowiska
+`nrf52_dk` nie oznacza, że do komputera jest podłączona płytka Nordic
+nRF52-DK. Standardowe `pio run -t upload` może oczekiwać programatora J-Link;
+do wgrania dowolnego zbudowanego firmware na pilot użyj ESP32/SWD.
 
-Po zbudowaniu szkicu Blinker wgraj plik HEX przez istniejące API ESP32:
+### Nowy projekt firmware nRF52
+
+Aby utworzyć nowy, niezależny szkic z Arduino, przejdź do katalogu
+`firmware` i wybierz nazwę projektu:
+
+```powershell
+mkdir firmware\nazwa-projektu
+cd firmware\nazwa-projektu
+uv run pio project init --board nrf52_dk --project-option "framework=arduino"
+```
+
+Z katalogu nowego projektu:
+
+```powershell
+uv run pio run -e nrf52_dk
+```
+
+Możesz też wrócić do katalogu głównego i użyć:
+
+```powershell
+cd ..\..
+uv run pio run --project-dir firmware\nazwa-projektu -e nrf52_dk
+```
+
+Polecenie `project init` tworzy szkielet PlatformIO, katalog `src` i plik
+`platformio.ini`. Nazwa środowiska powstająca z opcji `--board nrf52_dk` to
+`nrf52_dk`; jest ona punktem wyjścia dla wielu projektów firmware w katalogu
+`firmware`.
+
+### Wgrywanie pliku HEX
+
+Po zbudowaniu programu wskaż właściwy plik HEX odpowiednio dla projektu i
+środowiska. Przykład dla istniejącego szkicu Blinker:
 
 ```bash
 curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/blinker/.pio/build/nrf52_dk/firmware.hex" http://swd.local/flash_file_direct
+```
+
+Dla alternatywnego programu uogólniona forma polecenia wygląda tak:
+
+```bash
+curl -F "flash_up_file_offset=0" -F "flash_file_direct=@<ścieżka-do-firmware.hex>" http://swd.local/flash_file_direct
 ```
 
 Po wgraniu zresetuj nRF52 przez ESP32/SWD przed testem sprzętowym:
@@ -292,10 +362,12 @@ curl -F "flash_up_file_offset=10001000" -F "flash_file_direct=@dumps/full_uicr.b
 > offset i docelowy układ pamięci są poprawne. Nie kasuj ani nie wgrywaj UICR,
 > jeśli nie masz pewności, że taki UICR jest przeznaczony dla tej płytki.
 
-## Firmware blinker
+## Firmware nRF52 i test Blinker
 
-Prosty szkic do testowania LED RGB i przycisków:
-
+Katalog `firmware/blinker` zawiera jeden prosty szkic do testowania LED RGB i
+przycisków. Jest przykładem programu nRF52, a nie jedynym formatem ani
+wymaganą nazwą firmware w tym repozytorium:
+soemofo i tam teżtrzea 
 - LED miga początkowo na czerwono;
 - przycisk 1 zmienia kolor w kolejności czerwony → zielony → niebieski;
 - przycisk 2 zatrzymuje miganie (LED gaśnie) i wznawia je w wybranym kolorze.
