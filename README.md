@@ -17,6 +17,7 @@ Projekt zawiera narzędzia do:
 - [Przygotowanie środowiska](#przygotowanie-środowiska)
 - [Podłączenie programatora ESP32](#podłączenie-programatora-esp32)
 - [Praca z firmware nRF52](#praca-z-firmware-nrf52)
+- [Firmware blinker](#firmware-blinker)
 - [Test mapowania sprzętu](#test-mapowania-sprzętu)
 - [Planowane prace](#planowane-prace)
 - [Archiwum fabrycznego firmware](#archiwum-fabrycznego-firmware)
@@ -135,6 +136,35 @@ Podłącz dodatkowo wspólną masę z pinu 4 złącza do pinu `GND` modułu ESP3
 ESP32 udostępnia API do odczytu stanu, odblokowania APPROTECT, zrzutu pamięci i
 przywracania firmware. Wszystkie operacje można wykonywać ręcznie w interfejsie
 WWW pod adresem `http://swd.local/` lub za pomocą zapytań `curl`.
+
+### Programowanie nRF52 przez ESP32/SWD
+
+W tym projekcie komputer komunikuje się z programatorem ESP32, a ESP32 łączy się
+z nRF52 przez SWD. Płytka pilota nRF52 nie jest podłączana bezpośrednio do
+komputera ani wykrywana przez PlatformIO jako urządzenie programujące.
+
+Środowisko `nrf52_dk` w `firmware/blinker/platformio.ini` służy do kompilacji
+firmware i wyboru wariantu Arduino. Nie oznacza, że do komputera jest podłączona
+płytka Nordic nRF52-DK. Standardowe `pio run -t upload` dla tego środowiska
+oczekuje programatora J-Link; do wgrania firmware na pilot użyj ESP32/SWD.
+
+Po zbudowaniu szkicu Blinker wgraj plik HEX przez istniejące API ESP32:
+
+```bash
+curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/blinker/.pio/build/nrf52_dk/firmware.hex" http://swd.local/flash_file_direct
+```
+
+Po wgraniu zresetuj nRF52 przez ESP32/SWD przed testem sprzętowym:
+
+```bash
+curl -X POST "http://swd.local/set_swd?cmd=set_reset"
+```
+
+Port szeregowy ESP32 nie jest portem szeregowym nRF52. Nie zakładaj, że
+`pio device monitor` albo testy PlatformIO uruchomione dla targetu nRF52 będą
+mogły wgrać firmware lub odczytać z niego logi. Logikę niezależną od sprzętu
+testuj hostowo, a fizyczne GPIO i działanie płytki weryfikuj przez ESP32/SWD,
+np. narzędziem [`tools/hardware_test.py`](tools/hardware_test.py).
 
 ### Interfejs przeglądarkowy
 
@@ -261,6 +291,50 @@ curl -F "flash_up_file_offset=10001000" -F "flash_file_direct=@dumps/full_uicr.b
 > operacjami destrukcyjnymi. Przed ich wykonaniem upewnij się, że plik,
 > offset i docelowy układ pamięci są poprawne. Nie kasuj ani nie wgrywaj UICR,
 > jeśli nie masz pewności, że taki UICR jest przeznaczony dla tej płytki.
+
+## Firmware blinker
+
+Prosty szkic do testowania LED RGB i przycisków:
+
+- LED miga początkowo na czerwono;
+- przycisk 1 zmienia kolor w kolejności czerwony → zielony → niebieski;
+- przycisk 2 zatrzymuje miganie (LED gaśnie) i wznawia je w wybranym kolorze.
+
+Wariant Arduino `nRF52DK` używa numerów cyfrowych pinów, które odpowiadają
+poniższym portom nRF52:
+
+| Funkcja | Port nRF52 | Pin Arduino |
+|---|---|---|
+| Przycisk zmiany koloru | P0.13 | D2 |
+| Przycisk pauzy | P0.14 | D3 |
+| Czerwony kanał LED | P0.17 | D6 |
+| Zielony kanał LED | P0.18 | D7 |
+| Niebieski kanał LED | P0.19 | D8 |
+
+Zbuduj firmware:
+
+```powershell
+uv run pio run --project-dir firmware\blinker -e nrf52_dk
+```
+
+Plik wynikowy to `firmware\blinker\.pio\build\nrf52_dk\firmware.hex`.
+Wgraj go przez istniejący programator ESP32/SWD; standardowy upload PlatformIO
+dla `nrf52_dk` oczekuje programatora J-Link.
+
+Logikę przycisków, debounce i migania można testować na komputerze bez płytki:
+
+```powershell
+uv run pio test --project-dir firmware\blinker -e host-test-windows
+```
+
+Na Linuxie uruchom:
+
+```bash
+uv run pio test --project-dir firmware/blinker -e host-test-linux
+```
+
+Testy hostowe nie sprawdzają fizycznego mapowania pinów ani działania LED na
+płytce.
 
 ## Test mapowania sprzętu
 
