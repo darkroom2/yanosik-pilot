@@ -31,6 +31,8 @@
 - [ ] Dodawać przykłady poleceń zachowujące zgodność składni między Linuxem i
   PowerShell.
 - [ ] Zweryfikować instrukcje przywracania flash i UICR na rzeczywistym urządzeniu.
+- [ ] Potwierdzić sprzętowo rozgłaszanie `nRF52_Bluefruit` po wgraniu SoftDevice
+  S132 i firmware przez ESP32/SWD.
 
 ## NFC
 

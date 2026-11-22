@@ -17,7 +17,10 @@ Projekt zawiera narzędzia do:
 - [Przygotowanie środowiska](#przygotowanie-środowiska)
 - [Podłączenie programatora ESP32](#podłączenie-programatora-esp32)
 - [Praca z firmware nRF52](#praca-z-firmware-nrf52)
-- [Firmware nRF52 i test Blinker](#firmware-nrf52-i-test-blinker)
+  - [Budowanie i wgrywanie projektów firmware](#budowanie-i-wgrywanie-projektów-firmware)
+    - [`firmware/blinker`](#firmwareblinker)
+    - [`firmware/ble-test`](#firmwareble-test)
+- [Testowanie firmware](#testowanie-firmware)
 - [Test mapowania sprzętu](#test-mapowania-sprzętu)
 - [Planowane prace](#planowane-prace)
 - [Archiwum fabrycznego firmware](#archiwum-fabrycznego-firmware)
@@ -209,26 +212,98 @@ Polecenie `project init` tworzy szkielet PlatformIO, katalog `src` i plik
 `nrf52_dk`; jest ona punktem wyjścia dla wielu projektów firmware w katalogu
 `firmware`.
 
-### Wgrywanie pliku HEX
+### Budowanie i wgrywanie projektów firmware
 
-Po zbudowaniu programu wskaż właściwy plik HEX odpowiednio dla projektu i
-środowiska. Przykład dla istniejącego szkicu Blinker:
+Budowanie jest wykonywane przez PlatformIO. Wgrywanie przez ESP32/SWD odbywa się
+przez endpoint `flash_file_direct`, a po transferze cel należy zresetować przez
+`set_reset`. Każdy projekt ma własny wynikowy HEX i może mieć inne wymagania
+pamięciowe.
+
+#### `firmware/blinker`
+
+Ten szkic testuje LED RGB i dwa przyciski:
+
+- LED miga początkowo na czerwono;
+- przycisk 1 zmienia kolor w kolejności czerwony → zielony → niebieski;
+- przycisk 2 zatrzymuje miganie (LED gaśnie) i wznawia je w wybranym kolorze.
+
+Wariant Arduino `nRF52DK` używa następujących pinów:
+
+| Funkcja | Port nRF52 | Pin Arduino |
+|---|---|---|
+| Przycisk zmiany koloru | P0.13 | D2 |
+| Przycisk pauzy | P0.14 | D3 |
+| Czerwony kanał LED | P0.17 | D6 |
+| Zielony kanał LED | P0.18 | D7 |
+| Niebieski kanał LED | P0.19 | D8 |
+
+Uruchom testy hostowe tego projektu:
+
+```powershell
+uv run pio test --project-dir firmware\blinker -e host-test-windows
+```
+
+Na Linuxie:
+
+```bash
+uv run pio test --project-dir firmware/blinker -e host-test-linux
+```
+
+Zbuduj szkic:
+
+```powershell
+uv run pio run --project-dir firmware\blinker -e nrf52_dk
+```
+
+Wgraj aplikację:
 
 ```bash
 curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/blinker/.pio/build/nrf52_dk/firmware.hex" http://swd.local/flash_file_direct
-```
-
-Dla alternatywnego programu uogólniona forma polecenia wygląda tak:
-
-```bash
-curl -F "flash_up_file_offset=0" -F "flash_file_direct=@<ścieżka-do-firmware.hex>" http://swd.local/flash_file_direct
-```
-
-Po wgraniu zresetuj nRF52 przez ESP32/SWD przed testem sprzętowym:
-
-```bash
 curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 ```
+
+#### `firmware/ble-test`
+
+Projekt `firmware/ble-test` używa rdzenia Adafruit nRF52 z biblioteką
+Bluefruit i po uruchomieniu rozgłasza urządzenie o nazwie
+`nRF52_Bluefruit`. Do samego testu radio mapa pinów płytki nie ma znaczenia.
+
+Zbuduj minimalny test rozgłaszania dla środowiska `adafruit_feather_nrf52832`:
+
+```powershell
+uv run pio run --project-dir firmware\ble-test -e adafruit_feather_nrf52832
+```
+
+Wynikowy plik HEX aplikacji:
+
+```text
+firmware/ble-test/.pio/build/adafruit_feather_nrf52832/firmware.hex
+```
+
+Firmware Adafruit wymaga SoftDevice S132 zgodnego z tym środowiskiem. Dla
+profilu Feather nRF52832 pakiet zawiera obraz bootloadera z SoftDevice:
+
+```text
+bootloader/feather_nrf52832/feather_nrf52832_bootloader-0.9.1_s132_6.1.1.hex
+```
+
+Jeśli urządzenie nie ma jeszcze tego bootloadera i SoftDevice, wgraj najpierw
+pełny plik HEX tego obrazu przez ESP32/SWD:
+
+```bash
+curl -F "flash_up_file_offset=0" -F "flash_file_direct=@<ścieżka-pakietu>\bootloader\feather_nrf52832\feather_nrf52832_bootloader-0.9.1_s132_6.1.1.hex" http://swd.local/flash_file_direct
+```
+
+Następnie wgraj aplikację i zresetuj cel:
+
+```bash
+curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/ble-test/.pio/build/adafruit_feather_nrf52832/firmware.hex" http://swd.local/flash_file_direct
+curl -X POST "http://swd.local/set_swd?cmd=set_reset"
+```
+
+Bootloader i SoftDevice nie są częścią `firmware.hex`; nie zastępuj ich innym
+obrazem S132. Obecność rozgłaszania `nRF52_Bluefruit` potwierdź skanerem BLE;
+sam pomyślny build lub HTTP 200 transferu nie potwierdzają działania radio.
 
 Port szeregowy ESP32 nie jest portem szeregowym nRF52. Nie zakładaj, że
 `pio device monitor` albo testy PlatformIO uruchomione dla targetu nRF52 będą
@@ -362,51 +437,53 @@ curl -F "flash_up_file_offset=10001000" -F "flash_file_direct=@dumps/full_uicr.b
 > offset i docelowy układ pamięci są poprawne. Nie kasuj ani nie wgrywaj UICR,
 > jeśli nie masz pewności, że taki UICR jest przeznaczony dla tej płytki.
 
-## Firmware nRF52 i test Blinker
+## Testowanie firmware
 
-Katalog `firmware/blinker` zawiera jeden prosty szkic do testowania LED RGB i
-przycisków. Jest przykładem programu nRF52, a nie jedynym formatem ani
-wymaganą nazwą firmware w tym repozytorium:
-soemofo i tam teżtrzea 
-- LED miga początkowo na czerwono;
-- przycisk 1 zmienia kolor w kolejności czerwony → zielony → niebieski;
-- przycisk 2 zatrzymuje miganie (LED gaśnie) i wznawia je w wybranym kolorze.
+Każdy projekt firmware powinien rozdzielać logikę testowalną na komputerze od
+integracji ze sprzętem. Zalecane jest stosowanie niżej opisanej piramidy testów;
+nie trzeba tworzyć wszystkiego naraz, ale nowa funkcja niepowiązana bezpośrednio
+ze sprzętem powinna mieć test hostowy.
 
-Wariant Arduino `nRF52DK` używa numerów cyfrowych pinów, które odpowiadają
-poniższym portom nRF52:
+### Przygotowanie środowisk testowych
 
-| Funkcja | Port nRF52 | Pin Arduino |
-|---|---|---|
-| Przycisk zmiany koloru | P0.13 | D2 |
-| Przycisk pauzy | P0.14 | D3 |
-| Czerwony kanał LED | P0.17 | D6 |
-| Zielony kanał LED | P0.18 | D7 |
-| Niebieski kanał LED | P0.19 | D8 |
+Dodaj do `platformio.ini` każdego projektu środowiska hostowe, oddzielnie dla
+Windows i Linuxa:
 
-Zbuduj firmware:
+```ini
+[env:host-test-windows]
+platform = windows_x86
+test_framework = unity
+build_flags = -std=gnu++11
 
-```powershell
-uv run pio run --project-dir firmware\blinker -e nrf52_dk
+[env:host-test-linux]
+platform = linux_x86_64
+test_framework = unity
+build_flags = -std=gnu++11
 ```
 
-Plik wynikowy to `firmware\blinker\.pio\build\nrf52_dk\firmware.hex`.
-Wgraj go przez istniejący programator ESP32/SWD; standardowy upload PlatformIO
-dla `nrf52_dk` oczekuje programatora J-Link.
+W projektach testowych umieść Unity testy pod `test/<nazwa-testów>/`, a logikę
+bez zależności od Arduino i nRF52 wydziel do `lib/` lub osobnego modułu. Hostowe
+środowisko powinno kompilować tę czystą logikę i testy, bez dołączania szkicu
+firmware i kodu sprzętowego.
 
-Logikę przycisków, debounce i migania można testować na komputerze bez płytki:
+1. **Logika hostowa** — wydziel czystą logikę do biblioteki lub modułu bez
+   zależności od Arduino, rejestrów nRF52 i pinów. Testy Unity uruchamiaj w
+   środowisku `host-test-windows` lub `host-test-linux`, zależnie od systemu.
+2. **Kompilacja firmware** — po zmianach zbuduj właściwe środowisko projektu.
+   Zielony build potwierdza zależności i linkowanie, ale nie potwierdza działania
+   radio, GPIO ani timerów na płytce.
+3. **Integracja sprzętowa** — po wgraniu przez ESP32/SWD zresetuj nRF52 i
+   obserwuj konkretne zachowanie: LED, przyciski, komunikację BLE, pomiary czy
+   inne interfejsy. HTTP 200 z ESP32 potwierdza tylko transfer, a nie działanie
+   firmware.
+4. **Testy przyszłych wariantów** — dla każdego nowego projektu utwórz własne
+   przypadki integracyjne i dopisz wynik do README lub TODO. Dla testów tworzących
+   stan powtarzalny należy podać kroki wejściowe, oczekiwany rezultat i sposób
+   przywrócenia płytki do stanu startowego.
 
-```powershell
-uv run pio test --project-dir firmware\blinker -e host-test-windows
-```
-
-Na Linuxie uruchom:
-
-```bash
-uv run pio test --project-dir firmware/blinker -e host-test-linux
-```
-
-Testy hostowe nie sprawdzają fizycznego mapowania pinów ani działania LED na
-płytce.
+Testy hostowe powinny obejmować stan, przejścia i przypadki brzegowe bez sprzętu.
+Testy sprzętowe powinny pozostawać krótkimi procedurami obserwacyjnymi i nie
+powinny zastępować testów czystej logiki.
 
 ## Test mapowania sprzętu
 

@@ -27,6 +27,29 @@ uv run pytest tests/test_hardware_test.py::HardwareTestHelpers
 
 Python tests use `unittest.TestCase` and `unittest.mock`, and are run by pytest. The project has no configured lint command.
 
+### Firmware testing policy
+
+- Separate hardware-independent behavior into a library or module that has no Arduino, nRF52 register, pin, BLE, or timer hardware dependency. Test that code with Unity on `host-test-windows` or `host-test-linux`.
+- Give each firmware project host environments in `platformio.ini`:
+
+  ```ini
+  [env:host-test-windows]
+  platform = windows_x86
+  test_framework = unity
+  build_flags = -std=gnu++11
+
+  [env:host-test-linux]
+  platform = linux_x86_64
+  test_framework = unity
+  build_flags = -std=gnu++11
+  ```
+
+- Put Unity tests under `firmware/<project>/test/` and hardware-independent reusable logic under `firmware/<project>/lib/` or an equally focused module directory. Do not make the host test environment compile Arduino pin setup or the firmware entry point when that code can be isolated.
+- Test states, transitions, debounce, timing boundaries, invalid inputs, and state changes that can fail. Prefer one behavior per test and assert real logic behavior rather than mocks of PlatformIO or Arduino APIs.
+- Before hardware verification, run the host tests and build the real firmware environment. A successful build proves compilation/linking only.
+- After flashing nRF52 through ESP32/SWD, reset the target, then verify a named physical behavior. HTTP 200 or a successful flash response does not prove radio, GPIO, LED, button, or peripheral behavior.
+- Record repeatable hardware verification steps and expected observations in the project's README section. Record unresolved hardware work in `TODO.md`.
+
 ## Repository-specific conventions
 
 - Keep the hardware-test client's SWD commands constrained by `ALLOWED_COMMANDS` in `tools/hardware_test.py`; destructive flash operations are deliberately excluded from this interactive pin-mapping tool.
@@ -41,6 +64,7 @@ Python tests use `unittest.TestCase` and `unittest.mock`, and are run by pytest.
 ## Documentation and project knowledge
 
 - Keep `README.md` and `TODO.md` current as the code, hardware findings, setup, commands, or workflows change. Update the README with confirmed behavior and instructions; add newly discovered follow-up work to TODO, and mark or remove items when they are completed or no longer relevant.
+- In `README.md`, keep project-specific build, flash, test, behavior, and pin-mapping instructions together under `Budowanie i wgrywanie projektów firmware` in a sub-section named for each project under `firmware/`, so commands for a new project have an obvious location. Keep `Testowanie firmware` as a project-independent guide covering host logic tests, hardware integration tests, and the setup of `host-test-windows` and `host-test-linux`; do not duplicate project-specific commands there. Put stable project behavior and confirmed pin mappings before the build/flash commands as a short prolog to that project's sub-section.
 - At the end of every task, review newly confirmed findings for durable, reusable information that is not already documented, and add it to the appropriate project document without asking for approval. Use `README.md` for confirmed project facts, setup, hardware findings, and workflows; `TODO.md` for open follow-up work; and `copilot-instructions.md` for standing contributor or agent rules. Skip duplicates, one-off or machine-specific details, sensitive information, and unverified assumptions; ask the user if the finding's scope or durability is unclear. Mention documentation updates in the task summary.
 - When a problem recurs or its fix is confirmed, record the symptom, verified cause, and working resolution in the relevant README section. If troubleshooting notes grow beyond the README, move them to a dedicated document under `docs/` and link it from the README. Do not leave reusable fixes only in chat history.
 - When a user explicitly asks for a tool, workflow, convention, or approach to be consistently used or avoided, apply it and record the standing repository preference here during the same task. Keep these notes actionable and update them if the user changes the preference.
