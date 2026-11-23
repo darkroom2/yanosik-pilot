@@ -1,24 +1,19 @@
 #include <Arduino.h>
-#include <bluefruit.h>
+#include <BLEPeripheral.h>
 
-void setup()
-{
-    Serial.begin(115200);
+// Tworzymy obiekt urządzenia BLE
+BLEPeripheral blePeripheral = BLEPeripheral();
 
-    if (!Bluefruit.begin())
-    {
-        Serial.println("BLE: blad inicjalizacji");
-        return;
-    }
+void setup() {
+  // Nazwa widoczna na telefonie (max ok. 20 znaków)
+  blePeripheral.setLocalName("nRF52_Test_BLE");
+  blePeripheral.setDeviceName("nRF52_Test_BLE");
 
-    Bluefruit.setName("nRF52_Bluefruit");
-    Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
-    Bluefruit.Advertising.addName();
-    Bluefruit.Advertising.start(0);
-
-    Serial.println("BLE dziala! Szukaj: nRF52_Bluefruit");
+  // Uruchomienie stosu BLE i rozpoczęcie rozgłaszania (advertising)
+  blePeripheral.begin();
 }
 
-void loop()
-{
+void loop() {
+  // Obsługa zdarzeń Bluetooth w tle
+  blePeripheral.poll();
 }

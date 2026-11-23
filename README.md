@@ -264,46 +264,56 @@ curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 
 #### `firmware/ble-test`
 
-Projekt `firmware/ble-test` używa rdzenia Adafruit nRF52 z biblioteką
-Bluefruit i po uruchomieniu rozgłasza urządzenie o nazwie
-`nRF52_Bluefruit`. Do samego testu radio mapa pinów płytki nie ma znaczenia.
+Projekt `firmware/ble-test` używa środowiska PlatformIO `nrf52_dk`,
+frameworka Arduino i biblioteki `BLEPeripheral` (`sandeepmistry/BLEPeripheral`).
+Po uruchomieniu rozgłasza urządzenie o nazwie `nRF52_Test_BLE`.
+Do testu radio mapa pinów płytki nie ma znaczenia.
 
-Zbuduj minimalny test rozgłaszania dla środowiska `adafruit_feather_nrf52832`:
+Konfiguracja projektu określa SoftDevice S132 w wersji 2.0.1:
+
+```ini
+[env:nrf52_dk]
+platform = nordicnrf52
+board = nrf52_dk
+framework = arduino
+
+board_build.softdevice.sd_name = s132
+board_build.softdevice.sd_version = 2.0.1
+build_flags = -DNRF52_S132
+
+lib_deps =
+    sandeepmistry/BLEPeripheral
+```
+
+Przed pierwszym testem BLE przygotuj SoftDevice. Skrypt pobiera pakiet S132 do
+pamięci i wypakowuje wyłącznie plik HEX:
 
 ```powershell
-uv run pio run --project-dir firmware\ble-test -e adafruit_feather_nrf52832
+uv run python tools/extract_s132_softdevice.py
+```
+
+Wynik jest zapisany jako
+[`dumps/s132_nrf52_2.0.1_softdevice.hex`](dumps/s132_nrf52_2.0.1_softdevice.hex).
+
+Wgraj SoftDevice pod offsetem `0`, zbuduj aplikację i wgraj wynikowy HEX:
+
+```powershell
+curl -F "flash_up_file_offset=0" -F "flash_file_direct=@dumps/s132_nrf52_2.0.1_softdevice.hex" http://swd.local/flash_file_direct
+uv run pio run --project-dir firmware\ble-test -e nrf52_dk
+curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/ble-test/.pio/build/nrf52_dk/firmware.hex" http://swd.local/flash_file_direct
+curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 ```
 
 Wynikowy plik HEX aplikacji:
 
 ```text
-firmware/ble-test/.pio/build/adafruit_feather_nrf52832/firmware.hex
+firmware/ble-test/.pio/build/nrf52_dk/firmware.hex
 ```
 
-Firmware Adafruit wymaga SoftDevice S132 zgodnego z tym środowiskiem. Dla
-profilu Feather nRF52832 pakiet zawiera obraz bootloadera z SoftDevice:
-
-```text
-bootloader/feather_nrf52832/feather_nrf52832_bootloader-0.9.1_s132_6.1.1.hex
-```
-
-Jeśli urządzenie nie ma jeszcze tego bootloadera i SoftDevice, wgraj najpierw
-pełny plik HEX tego obrazu przez ESP32/SWD:
-
-```bash
-curl -F "flash_up_file_offset=0" -F "flash_file_direct=@<ścieżka-pakietu>\bootloader\feather_nrf52832\feather_nrf52832_bootloader-0.9.1_s132_6.1.1.hex" http://swd.local/flash_file_direct
-```
-
-Następnie wgraj aplikację i zresetuj cel:
-
-```bash
-curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/ble-test/.pio/build/adafruit_feather_nrf52832/firmware.hex" http://swd.local/flash_file_direct
-curl -X POST "http://swd.local/set_swd?cmd=set_reset"
-```
-
-Bootloader i SoftDevice nie są częścią `firmware.hex`; nie zastępuj ich innym
-obrazem S132. Obecność rozgłaszania `nRF52_Bluefruit` potwierdź skanerem BLE;
-sam pomyślny build lub HTTP 200 transferu nie potwierdzają działania radio.
+SoftDevice nie jest częścią `firmware.hex`; po zmianie SoftDevice lub przy
+ponownym flashowaniu aplikacji zachowaj poprawną kolejność i zresetuj cel.
+Obecność rozgłaszania `nRF52_Test_BLE` potwierdź skanerem BLE. Sam pomyślny
+build lub odpowiedź HTTP 200 nie potwierdzają działania radio.
 
 Port szeregowy ESP32 nie jest portem szeregowym nRF52. Nie zakładaj, że
 `pio device monitor` albo testy PlatformIO uruchomione dla targetu nRF52 będą

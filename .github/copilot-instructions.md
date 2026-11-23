@@ -2,7 +2,7 @@
 
 ## Architecture
 
-- The root Python project provides `tools/hardware_test.py`, a command-line client for the ESP32's HTTP API. It reads and writes nRF52 registers to interactively identify board pins; its unit tests are in `tests/test_hardware_test.py`.
+- The root Python project provides `tools/hardware_test.py`, a command-line client for the ESP32's HTTP API. It reads and writes nRF52 registers to interactively identify board pins; its Python tests are in `tools/tests/test_hardware_test.py`.
 - `tools/ESP32_nRF52_SWD` is a Git submodule containing the ESP32 firmware. `src/main.cpp` initializes the SWD, glitcher, and web components; `src/web.cpp` serves the HTTP API and SPIFFS editor; `src/nrf_swd.cpp` handles nRF52 access and queued flash read/write tasks; `src/swd.cpp` implements the SWD transport. The browser UI is in `data/index.htm`.
 - The PlatformIO environment settings in `tools/ESP32_nRF52_SWD/platformio.ini` select the board and define hardware pins as build flags. Firmware code consumes these pin macros, so keep pin mappings in sync with the environment configuration.
 - `firmware/blinker` is a separate nRF52 PlatformIO project that uses the `nrf52_dk` board profile to compile Arduino firmware for the pilot's nRF52832.
@@ -21,8 +21,8 @@ uv run pio run --project-dir tools/ESP32_nRF52_SWD -e ESP32_nRF52_SWD
 Run one test or one test class with pytest selectors:
 
 ```bash
-uv run pytest tests/test_hardware_test.py::HardwareTestHelpers::test_init_posts_init_command
-uv run pytest tests/test_hardware_test.py::HardwareTestHelpers
+uv run pytest tools/tests/test_hardware_test.py::HardwareTestHelpers::test_init_posts_init_command
+uv run pytest tools/tests/test_hardware_test.py::HardwareTestHelpers
 ```
 
 Python tests use `unittest.TestCase` and `unittest.mock`, and are run by pytest. The project has no configured lint command.
