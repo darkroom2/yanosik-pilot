@@ -1,6 +1,9 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/bluetooth/bluetooth.h>
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_REGISTER(ble_zephyr, LOG_LEVEL_INF);
 
 #define LED_PIN 17
 
@@ -24,16 +27,24 @@ static void blink_error(const struct device *gpio, int count)
 
 int main(void)
 {
+    LOG_INF("nRF52 Zephyr BLE starting");
+
     const struct device *gpio = DEVICE_DT_GET(DT_NODELABEL(gpio0));
-    gpio_pin_configure(gpio, LED_PIN, GPIO_OUTPUT_ACTIVE);
+    if (gpio_pin_configure(gpio, LED_PIN, GPIO_OUTPUT_ACTIVE) != 0) {
+        LOG_ERR("LED GPIO configuration failed");
+    }
 
     if (bt_enable(NULL) != 0) {
+        LOG_ERR("bt_enable failed");
         blink_error(gpio, 2);
     }
 
     if (bt_le_adv_start(BT_LE_ADV_NCONN, ad, ARRAY_SIZE(ad), NULL, 0) != 0) {
+        LOG_ERR("bt_le_adv_start failed");
         blink_error(gpio, 3);
     }
+
+    LOG_INF("BLE advertising started");
 
     while (1) {
         gpio_pin_toggle(gpio, LED_PIN);

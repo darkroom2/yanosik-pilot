@@ -337,6 +337,7 @@ firmware/ble-zephyr/.pio/build/nrf52_dk/zephyr/zephyr.bin
 Wgraj plik BIN przez istniejące API ESP32/SWD:
 
 ```powershell
+curl -X POST "http://swd.local/set_swd?cmd=erase_all"
 curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/ble-zephyr/.pio/build/nrf52_dk/zephyr/zephyr.bin" http://swd.local/flash_file_direct
 curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 ```
@@ -344,6 +345,35 @@ curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 Potwierdzenie sprzętowe wymaga zaobserwowania rozgłaszania `nRF52_Zephyr_BLE`
 skanerem BLE po zresetowaniu celu. Pomyślna kompilacja i odpowiedź HTTP 200
 same w sobie nie potwierdzają działania radio.
+
+Zweryfikowany sposób odczytu logów SEGGER RTT przez ESP32/SWD:
+
+1. Zatrzymaj lub zresetuj nRF52832 przez endpoint SWD.
+2. Zleć zrzut 64 KB RAM w oparciu o endpoint programu ESP32:
+
+```powershell
+curl.exe -u admin:admin -X POST "http://swd.local/flash_cmd?cmd=dump_flash&file=ram.bin&offset=20000000&size=10000"
+```
+
+3. Po zakończeniu zadania pobierz plik przez edytor SPIFFS:
+
+```powershell
+curl.exe -u admin:admin --fail -o ram.bin "http://swd.local/edit?download=ram.bin"
+```
+
+W zrzucie RAM należy szukać magic `SEGGER`/`SEggerRTT` oraz tekstów
+`nRF52 Zephyr BLE starting` i `BLE advertising started`.
+
+Automatyczny odczyt jednego ze skryptów:
+
+```powershell
+uv run python tools/read_rtt_logs.py --host http://swd.local --username admin --password admin
+```
+
+Skrypt zleca zrzut 64 KB RAM, czeka na ukończenie zadania i pobiera dane
+bezpośrednio do pamięci programu, bez tworzenia lokalnego pliku `ram.bin`.
+Zawartość pierwszego kanału RTT (up channel 0) zapisuje do `rtt.log` i jednocześnie
+wypisuje ją na konsolę. Nazwę pliku można zmienić opcją `--log`.
 
 Firmware sygnalizuje błędy na pinie P0.17:
 

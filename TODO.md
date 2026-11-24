@@ -35,8 +35,8 @@
   S132 i firmware przez ESP32/SWD.
 - [ ] Potwierdzić sprzętowo rozgłaszanie `nRF52_Zephyr_BLE` po zbudowaniu i wgraniu
   projektu `firmware/ble-zephyr` przez ESP32/SWD.
-- [ ] Zweryfikować, czy połączenie SWD umożliwia odczyt RTT dla Zephyra i
-  udokumentować działający skaner/reader RTT.
+- [ ] Dodać bezpośredni endpoint ESP32 do pobierania RAM jako `.bin`, aby nie
+  musieć pobierać zrzutu przez uwierzytelniony edytor SPIFFS.
 - [ ] Jeśli urządzenie nie uruchamia po SWD, sprawdzić APPROTECT i wykonać
   pełne wymazanie przed ponownym flashowaniem.
 
