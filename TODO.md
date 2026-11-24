@@ -33,6 +33,12 @@
 - [ ] Zweryfikować instrukcje przywracania flash i UICR na rzeczywistym urządzeniu.
 - [ ] Potwierdzić sprzętowo rozgłaszanie `nRF52_Test_BLE` po wgraniu SoftDevice
   S132 i firmware przez ESP32/SWD.
+- [ ] Potwierdzić sprzętowo rozgłaszanie `nRF52_Zephyr_BLE` po zbudowaniu i wgraniu
+  projektu `firmware/ble-zephyr` przez ESP32/SWD.
+- [ ] Zweryfikować, czy połączenie SWD umożliwia odczyt RTT dla Zephyra i
+  udokumentować działający skaner/reader RTT.
+- [ ] Jeśli urządzenie nie uruchamia po SWD, sprawdzić APPROTECT i wykonać
+  pełne wymazanie przed ponownym flashowaniem.
 
 ## NFC
 

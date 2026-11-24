@@ -20,6 +20,7 @@ Projekt zawiera narzędzia do:
   - [Budowanie i wgrywanie projektów firmware](#budowanie-i-wgrywanie-projektów-firmware)
     - [`firmware/blinker`](#firmwareblinker)
     - [`firmware/ble-test`](#firmwareble-test)
+    - [`firmware/ble-zephyr`](#firmwareble-zephyr)
 - [Testowanie firmware](#testowanie-firmware)
 - [Test mapowania sprzętu](#test-mapowania-sprzętu)
 - [Planowane prace](#planowane-prace)
@@ -314,6 +315,46 @@ SoftDevice nie jest częścią `firmware.hex`; po zmianie SoftDevice lub przy
 ponownym flashowaniu aplikacji zachowaj poprawną kolejność i zresetuj cel.
 Obecność rozgłaszania `nRF52_Test_BLE` potwierdź skanerem BLE. Sam pomyślny
 build lub odpowiedź HTTP 200 nie potwierdzają działania radio.
+
+#### `firmware/ble-zephyr`
+
+Projekt `firmware/ble-zephyr` używa frameworka Zephyr i natywnego stosu
+Bluetooth do rozgłaszania niełączonego urządzenia o nazwie `nRF52_Zephyr_BLE`.
+SEGGER RTT jest włączony w `zephyr/prj.conf` do przyszłej diagnostyki przez pamięć RAM i SWD.
+
+Zbuduj projekt środowiskiem `nrf52_dk`:
+
+```powershell
+uv run pio run --project-dir firmware\ble-zephyr -e nrf52_dk
+```
+
+Wynikowy plik BIN:
+
+```text
+firmware/ble-zephyr/.pio/build/nrf52_dk/zephyr/zephyr.bin
+```
+
+Wgraj plik BIN przez istniejące API ESP32/SWD:
+
+```powershell
+curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/ble-zephyr/.pio/build/nrf52_dk/zephyr/zephyr.bin" http://swd.local/flash_file_direct
+curl -X POST "http://swd.local/set_swd?cmd=set_reset"
+```
+
+Potwierdzenie sprzętowe wymaga zaobserwowania rozgłaszania `nRF52_Zephyr_BLE`
+skanerem BLE po zresetowaniu celu. Pomyślna kompilacja i odpowiedź HTTP 200
+same w sobie nie potwierdzają działania radio.
+
+Firmware sygnalizuje błędy na pinie P0.17:
+
+- dwa szybkie migania: błąd `bt_enable()`;
+- trzy szybkie migania: błąd `bt_le_adv_start()`;
+- przełączanie co 1 sekundę: Bluetooth został uruchomiony i program żyje.
+
+Przy samodzielnej płytce zmień `LED_PIN` na dostępny pin P0.xx. Jeśli po
+wgraniu nie ma reakcji LED, odłącz zasilanie i SWD, następnie uruchom układ
+ponownie. Sprawdź również reset po flaszu i pełne wymazanie flash, jeśli
+APPROTECT blokuje zapis.
 
 Port szeregowy ESP32 nie jest portem szeregowym nRF52. Nie zakładaj, że
 `pio device monitor` albo testy PlatformIO uruchomione dla targetu nRF52 będą
