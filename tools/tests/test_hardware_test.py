@@ -28,6 +28,10 @@ class HardwareTestHelpers(unittest.TestCase):
         with self.assertRaises(ValueError):
             hardware_test.parse_buzzer_pins("32")
 
+    def test_buzzer_parser_defaults_to_confirmed_pins(self):
+        args = hardware_test.build_parser().parse_args([])
+        self.assertEqual(hardware_test.parse_buzzer_pins(args.buzzer_pins), [5, 6])
+
     @patch("hardware_test.wait_for_user", return_value="yes")
     @patch("hardware_test.swd_write")
     def test_led_sequence_checks_each_color_separately(

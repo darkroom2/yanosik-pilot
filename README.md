@@ -20,6 +20,7 @@ Projekt zawiera narzędzia do:
   - [Budowanie i wgrywanie projektów firmware](#budowanie-i-wgrywanie-projektów-firmware)
     - [`firmware/blinker`](#firmwareblinker)
     - [`firmware/ble-test`](#firmwareble-test)
+    - [`firmware/buzzer-test`](#firmwarebuzzer-test)
     - [`firmware/ble-zephyr`](#firmwareble-zephyr)
 - [Testowanie firmware](#testowanie-firmware)
 - [Test mapowania sprzętu](#test-mapowania-sprzętu)
@@ -58,6 +59,8 @@ zarządzanie poborem energii.
 
 | Fizyczny pin | Port nRF52 | Podłączony element |
 |---|---|---|
+| 7 | P0.05 | Jeden biegun buzzera; podłączenie różnicowe / mostkowe |
+| 8 | P0.06 | Drugi biegun buzzera; podłączenie różnicowe / mostkowe |
 | 16 | P0.13 | Przycisk nr 1; styk zwiera do masy, wejście `INPUT_PULLUP` |
 | 17 | P0.14 | Przycisk nr 2; styk zwiera do masy, wejście `INPUT_PULLUP` |
 | 20 | P0.17 | Czerwona dioda LED, rezystor 510 Ω; anoda wspólna, świeci przy stanie niski |
@@ -66,8 +69,8 @@ zarządzanie poborem energii.
 
 ### Elementy wymagające dalszej identyfikacji
 
-- Nie zidentyfikowano jeszcze podłączeń pinów buzzera i układu podbijającego
-  napięcie.
+- Nie zidentyfikowano jeszcze układu podbijającego napięcie używanego przez
+  buzzer.
 - Nie zidentyfikowano jeszcze podłączeń akcelerometru LIS2DH, w tym magistrali
   komunikacyjnej i sygnału wybudzenia.
 - Nie potwierdzono ostatecznej funkcji fizycznych pinów przycisków poza ich
@@ -91,6 +94,7 @@ Wgraj firmware ESP32_nRF52_SWD z katalogu repozytorium:
 
 ```bash
 uv run pio run --project-dir tools/ESP32_nRF52_SWD -e ESP32_nRF52_SWD -t upload
+uv run pio run --project-dir tools/ESP32_nRF52_SWD -e ESP32_nRF52_SWD -t uploadfs
 ```
 
 ### Alternatywa dla Windows
@@ -99,6 +103,7 @@ Na Windows wgrywanie zwykle wymaga wskazania portu COM:
 
 ```powershell
 uv run pio run --project-dir tools/ESP32_nRF52_SWD -e ESP32_nRF52_SWD -t upload --upload-port COM3
+uv run pio run --project-dir tools/ESP32_nRF52_SWD -e ESP32_nRF52_SWD -t uploadfs --upload-port COM3
 ```
 
 Zastąp `COM3` portem zwróconym przez `uv run pio device list`.
@@ -315,6 +320,47 @@ SoftDevice nie jest częścią `firmware.hex`; po zmianie SoftDevice lub przy
 ponownym flashowaniu aplikacji zachowaj poprawną kolejność i zresetuj cel.
 Obecność rozgłaszania `nRF52_Test_BLE` potwierdź skanerem BLE. Sam pomyślny
 build lub odpowiedź HTTP 200 nie potwierdzają działania radio.
+
+#### `firmware/buzzer-test`
+
+Projekt `firmware/buzzer-test` używa frameworka Zephyr i sprzętowego PWM do
+testu różnicowego podłączenia buzzera:
+
+| Funkcja | Port nRF52 | Fizyczny pin |
+|---|---|---|
+| Kanał A buzzera | P0.05 / GPIO 5 | 7 |
+| Kanał B buzzera | P0.06 / GPIO 6 | 8 |
+
+PWM0 generuje ton 2 kHz z wypełnieniem 50% na obu kanałach. Drugi kanał ma
+odwróconą polaryzację, więc sygnał jest sterowany przeciwfazowo. Ton trwa
+500 ms, następnie następuje cisza przez 1000 ms. W stanie ciszy oba kanały
+ustawiają się tak, aby nie utrzymywać różnicy potencjałów.
+
+UART0 i standardowe wejście/wyjście konsoli są wyłączone w celu zwolnienia
+P0.05 i P0.06. Diagnostykę można realizować przez RTT.
+
+Zbuduj projekt środowiskiem `nrf52_dk`:
+
+```powershell
+uv run pio run --project-dir firmware\buzzer-test -e nrf52_dk
+```
+
+Wynikowy plik BIN:
+
+```text
+firmware/buzzer-test/.pio/build/nrf52_dk/zephyr/zephyr.bin
+```
+
+Wgraj plik przez ESP32/SWD, a następnie zresetuj cel:
+
+```powershell
+curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/buzzer-test/.pio/build/nrf52_dk/zephyr/zephyr.bin" http://swd.local/flash_file_direct
+curl -X POST "http://swd.local/set_swd?cmd=set_reset"
+```
+
+Potwierdzenie sprzętowe wymaga fizycznego usłyszenia tonu około 2 kHz przez
+500 ms i ciszy przez około 1000 ms po zresetowaniu nRF52. Pomyślna kompilacja
+lub odpowiedź HTTP 200 potwierdzają tylko kompilację i transfer pliku.
 
 #### `firmware/ble-zephyr`
 
@@ -581,7 +627,7 @@ python tools/hardware_test.py --host http://swd.local --duration 0.5
 - `--led-only` — test pinów P0.17, P0.18 i P0.19;
 - `--button-only` — test pinów P0.13 i P0.14;
 - `--buzzer-only` — test wskazanych pinów buzzera;
-- `--buzzer-pins 15,16,20,24,25,31` — lista pinów testowanych w trybie buzzera;
+- `--buzzer-pins 5,6` — potwierdzone piny różnicowe buzzera P0.05 i P0.06;
 - `--output mapping.json` — zapis wyniku testu do pliku JSON.
 
 ## Planowane prace

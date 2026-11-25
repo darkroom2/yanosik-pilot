@@ -17,8 +17,9 @@
 
 ## Buzzer
 
-- [ ] Zidentyfikować piny buzzera i układu podbijania napięcia.
-- [ ] Dodać potwierdzony wynik do tabeli mapowania pinów.
+- [x] Potwierdzić fizyczne mapowanie buzzera: pin 7 -> P0.05, pin 8 -> P0.06.
+- [ ] Zidentyfikować układ podbijania napięcia używany przez buzzer.
+- [ ] Zweryfikować sprzętowo ton i ciszę projektu `firmware/buzzer-test`.
 - [ ] Dodać dwukierunkową sygnalizację stanów przez buzzer i diodę/LED:
   zdarzenia wychodzące z pilota do Home Assistant oraz potwierdzenia lub stany
   przychodzące z Home Assistant lub innych systemów.

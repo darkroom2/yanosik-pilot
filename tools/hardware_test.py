@@ -175,7 +175,7 @@ def build_parser():
     parser = argparse.ArgumentParser(description="Interactive nRF52832 hardware mapping tests")
     parser.add_argument("--host", default="http://swd.local")
     parser.add_argument("--duration", type=float, default=0.5)
-    parser.add_argument("--buzzer-pins", default="15,16,20,24,25,31")
+    parser.add_argument("--buzzer-pins", default="5,6")
     parser.add_argument("--led-only", action="store_true")
     parser.add_argument("--button-only", action="store_true")
     parser.add_argument("--buzzer-only", action="store_true")
