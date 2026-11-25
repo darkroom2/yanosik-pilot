@@ -346,6 +346,7 @@ Potwierdzenie sprzętowe wymaga zaobserwowania rozgłaszania `nRF52_Zephyr_BLE`
 skanerem BLE po zresetowaniu celu. Pomyślna kompilacja i odpowiedź HTTP 200
 same w sobie nie potwierdzają działania radio.
 
+TODO: poprawic skrypt i wywalic te sekcje 
 Zweryfikowany sposób odczytu logów SEGGER RTT przez ESP32/SWD:
 
 1. Zatrzymaj lub zresetuj nRF52832 przez endpoint SWD.
