@@ -17,6 +17,7 @@ Projekt zawiera narzędzia do:
 - [Przygotowanie środowiska](#przygotowanie-środowiska)
 - [Podłączenie programatora ESP32](#podłączenie-programatora-esp32)
 - [Praca z firmware nRF52](#praca-z-firmware-nrf52)
+  - [nRF52832 Hardware & SWD Flashing Notes](#nrf52832-hardware--swd-flashing-notes)
   - [Budowanie i wgrywanie projektów firmware](#budowanie-i-wgrywanie-projektów-firmware)
     - [`firmware/blinker`](#firmwareblinker)
     - [`firmware/ble-test`](#firmwareble-test)
@@ -54,6 +55,9 @@ zarządzanie poborem energii.
   buforują krótkotrwałe skoki poboru prądu, np. podczas pracy buzzera.
 - **Pady serwisowe SWD** — złote pola lutownicze służące do programowania i
   diagnostyki układu nRF52832.
+- **Cewka DCC (10 µH)** — zewnętrzna indukcyjność obsługująca przetwornicę
+  nRF52832 w trybie DC/DC.
+- **Cewka DEC4 (15 nH)** — zewnętrzna indukcyjność nRF52832.
 
 ### Zidentyfikowane piny
 
@@ -188,6 +192,32 @@ mogą istnieć inne katalogi firmware i alternatywne pliki HEX. Nazwa środowisk
 `nrf52_dk` nie oznacza, że do komputera jest podłączona płytka Nordic
 nRF52-DK. Standardowe `pio run -t upload` może oczekiwać programatora J-Link;
 do wgrania dowolnego zbudowanego firmware na pilot użyj ESP32/SWD.
+
+### nRF52832 Hardware & SWD Flashing Notes
+
+Wszystkie firmware Zephyr powinny zachować:
+
+```ini
+CONFIG_NRF_APPROTECT_USE_UICR=y
+CONFIG_NRF_APPROTECT_LOCK=n
+```
+
+`CONFIG_NRF_APPROTECT_LOCK=n` z `CONFIG_NRF_APPROTECT_USE_UICR=y` utrzymuje
+SWD odblokowane podczas rozwoju i zapobiega ponownemu zablokowaniu po każdym
+starcie Zephyr.
+
+Jeżeli przypadkowo wgrano firmware, które włącza DC/DC lub blokuje
+`APPROTECT`, odzyskanie wykonuje ESP32 przez procedurę cold-boot `ERASEALL`:
+
+1. VDD, `SWDCLK` i `SWDIO` są jednocześnie ustawiane na stan niski na 500 ms.
+2. VDD wraca na stan wysoki, `SWDCLK` pozostaje niski, a po 1 ms inicjowane jest SWD.
+3. ESP32 wysyła sekwencję line reset SWD, czyści DP, włącza zasilanie debugera,
+   wybiera AP 1 i wykonuje `CTRL-AP RESET` oraz `ERASEALL`, zanim Zephyr zdąży
+   uruchomić DCDC, APPROTECT albo stan uśpienia.
+
+Operację uruchamia polecenie `curl -X POST "http://swd.local/set_swd?cmd=erase_all"`.
+Odpowiedź HTTP `Erase started` oznacza przyjęcie polecenia; dalszy przebieg i
+diagnostyka `ERASEALLSTATUS` są raportowane przez port szeregowy ESP32.
 
 ### Nowy projekt firmware nRF52
 
@@ -383,6 +413,7 @@ firmware/ble-zephyr/.pio/build/nrf52_dk/zephyr/zephyr.bin
 Wgraj plik BIN przez istniejące API ESP32/SWD:
 
 ```powershell
+curl -X POST "http://swd.local/set_swd?cmd=init"
 curl -X POST "http://swd.local/set_swd?cmd=erase_all"
 curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/ble-zephyr/.pio/build/nrf52_dk/zephyr/zephyr.bin" http://swd.local/flash_file_direct
 curl -X POST "http://swd.local/set_swd?cmd=set_reset"
