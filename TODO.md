@@ -31,10 +31,10 @@
 - [ ] Uzupełnić dokumentację API ESP32_nRF52_SWD o wszystkie dostępne operacje.
 - [ ] Dodawać przykłady poleceń zachowujące zgodność składni między Linuxem i
   PowerShell.
-- [ ] Zweryfikować instrukcje przywracania flash i UICR na rzeczywistym urządzeniu.
-- [ ] Potwierdzić sprzętowo rozgłaszanie `nRF52_Test_BLE` po wgraniu SoftDevice
+- [x] Zweryfikować instrukcje przywracania flash i UICR na rzeczywistym urządzeniu.
+- [x] Potwierdzić sprzętowo rozgłaszanie `nRF52_Test_BLE` po wgraniu SoftDevice
   S132 i firmware przez ESP32/SWD.
-- [ ] Potwierdzić sprzętowo rozgłaszanie `nRF52_Zephyr_BLE` po zbudowaniu i wgraniu
+- [x] Potwierdzić sprzętowo rozgłaszanie `nRF52_Zephyr_BLE` po zbudowaniu i wgraniu
   projektu `firmware/ble-zephyr` przez ESP32/SWD.
 - [ ] Dodać bezpośredni endpoint ESP32 do pobierania RAM jako `.bin`, aby nie
   musieć pobierać zrzutu przez uwierzytelniony edytor SPIFFS.

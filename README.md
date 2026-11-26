@@ -294,6 +294,8 @@ uv run pio run --project-dir firmware\blinker -e nrf52_dk
 Wgraj aplikację:
 
 ```bash
+curl -X POST "http://swd.local/set_swd?cmd=init"
+curl -X POST "http://swd.local/set_swd?cmd=erase_all"
 curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/blinker/.pio/build/nrf52_dk/firmware.hex" http://swd.local/flash_file_direct
 curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 ```
@@ -334,6 +336,8 @@ Wynik jest zapisany jako
 Wgraj SoftDevice pod offsetem `0`, zbuduj aplikację i wgraj wynikowy HEX:
 
 ```powershell
+curl -X POST "http://swd.local/set_swd?cmd=init"
+curl -X POST "http://swd.local/set_swd?cmd=erase_all"
 curl -F "flash_up_file_offset=0" -F "flash_file_direct=@dumps/s132_nrf52_2.0.1_softdevice.hex" http://swd.local/flash_file_direct
 uv run pio run --project-dir firmware\ble-test -e nrf52_dk
 curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/ble-test/.pio/build/nrf52_dk/firmware.hex" http://swd.local/flash_file_direct
@@ -384,6 +388,8 @@ firmware/buzzer-test/.pio/build/nrf52_dk/zephyr/zephyr.bin
 Wgraj plik przez ESP32/SWD, a następnie zresetuj cel:
 
 ```powershell
+curl -X POST "http://swd.local/set_swd?cmd=init"
+curl -X POST "http://swd.local/set_swd?cmd=erase_all"
 curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/buzzer-test/.pio/build/nrf52_dk/zephyr/zephyr.bin" http://swd.local/flash_file_direct
 curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 ```
@@ -548,46 +554,25 @@ do nRF52. Nie trzeba wcześniej kopiować ich do pamięci SPIFFS ESP32.
 W sekcji **Flash** interfejsu `http://swd.local/` znajduje się formularz
 **Flash Uploaded File**:
 
-1. W polu **Offset 0x** wpisz `0` dla [`dumps/full_flash.bin`](dumps/full_flash.bin).
-2. Wybierz plik `dumps/full_flash.bin` na dysku.
+1. W polu **Offset 0x** wpisz `0` dla [`dumps/factory/full_flash.bin`](dumps/factory/full_flash.bin).
+2. Wybierz plik `dumps/factory/full_flash.bin` na dysku.
 3. Kliknij **Submit** lub przycisk wgrywania formularza.
 4. Aby przywrócić UICR, ponownie użyj formularza i wpisz offset
-   `10001000`, wybierając [`dumps/full_uicr.bin`](dumps/full_uicr.bin).
+   `10001000`, wybierając [`dumps/factory/full_uicr.bin`](dumps/factory/full_uicr.bin).
 
 Offset adresowy UICR jest podany w szesnastkowym zapisie bez prefiksu `0x`.
 
 #### Z wiersza polecenia na Linuxie
 
-Najpierw przejdź do katalogu repozytorium, a następnie wyślij plik bezpośrednio
-do ESP32:
+
+Do pełnego przywrócenia archiwum można najpierw wykonać kasowanie całej pamięci, następnie wgraj kolejno oba pliki z dysku:
 
 ```bash
-curl -F "flash_up_file_offset=0" -F "flash_file_direct=@dumps/full_flash.bin" http://swd.local/flash_file_direct
-```
-
-UICR należy wgrać osobno pod offsetem `0x10001000`:
-
-```bash
-curl -F "flash_up_file_offset=10001000" -F "flash_file_direct=@dumps/full_uicr.bin" http://swd.local/flash_file_direct
-```
-
-Możesz sprawdzić postęp i stan połączenia przez:
-
-```bash
-curl "http://swd.local/get_state"
-```
-
-Do pełnego przywrócenia archiwum można najpierw wykonać kasowanie całej pamięci:
-
-```bash
-curl -X POST "http://swd.local/flash_cmd?cmd=erase_all"
-```
-
-Następnie wgraj kolejno oba pliki z dysku:
-
-```bash
-curl -F "flash_up_file_offset=0" -F "flash_file_direct=@dumps/full_flash.bin" http://swd.local/flash_file_direct
-curl -F "flash_up_file_offset=10001000" -F "flash_file_direct=@dumps/full_uicr.bin" http://swd.local/flash_file_direct
+curl -X POST "http://swd.local/set_swd?cmd=init"
+curl -X POST "http://swd.local/set_swd?cmd=erase_all"
+curl -F "flash_up_file_offset=0" -F "flash_file_direct=@dumps/factory/full_flash.bin" http://swd.local/flash_file_direct
+curl -F "flash_up_file_offset=10001000" -F "flash_file_direct=@dumps/factory/full_uicr.bin" http://swd.local/flash_file_direct
+curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 ```
 
 > [!WARNING]
@@ -673,5 +658,5 @@ Poniższe pliki to pełne odczyty pamięci wykonane przez ESP32 i interfejs SWD:
 
 | Plik | Zawartość | Rozmiar | SHA-256 |
 |---|---|---:|---|
-| [`dumps/full_flash.bin`](dumps/full_flash.bin) | Pełna pamięć flash | 512 KiB | `ec3060bb5d8160296f1891a2d4d2db7882535f80779dd6fe611bf300a475d826` |
-| [`dumps/full_uicr.bin`](dumps/full_uicr.bin) | UICR | 4 KiB | `8cf25c59ad391780435765317039d2256cc618ff036a3c0847033c8d593e13dd` |
+| [`dumps/factory/full_flash.bin`](dumps/factory/full_flash.bin) | Pełna pamięć flash | 512 KiB | `ec3060bb5d8160296f1891a2d4d2db7882535f80779dd6fe611bf300a475d826` |
+| [`dumps/factory/full_uicr.bin`](dumps/factory/full_uicr.bin) | UICR | 4 KiB | `8cf25c59ad391780435765317039d2256cc618ff036a3c0847033c8d593e13dd` |
