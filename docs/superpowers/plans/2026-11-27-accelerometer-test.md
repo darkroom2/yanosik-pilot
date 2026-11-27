@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Create `firmware/accelerometer-test` as a Zephyr/PlatformIO application for the nRF52832 pilot that reads LIS2DH12 over SPI1 and maps X/Y/Z tilt to RGB LED channels.
+**Goal:** Create `firmware/accelerometer-test` as a Zephyr/PlatformIO application for the nRF52832 pilot that reads LIS2DH12 over I2C and maps X/Y/Z tilt to RGB LED channels.
 
-**Architecture:** Copy the existing Zephyr template, then replace only project identity and hardware-facing configuration. DeviceTree owns LED, SPI1, pinctrl, LIS2DH12, IRQ, and aliases; Kconfig enables required GPIO/SPI/sensor drivers; `src/main.c` performs readiness checks, ODR setup, 50 ms sampling, and RGB threshold control.
+**Architecture:** Copy the existing Zephyr template, then replace only project identity and hardware-facing configuration. DeviceTree owns LED, I2C0, pinctrl, LIS2DH12, and aliases; Kconfig enables required GPIO/I2C/sensor drivers; `src/main.c` performs readiness checks, ODR setup, 150 ms sampling, and dominant-axis RGB control.
 
 **Tech Stack:** Zephyr RTOS, Nordic nRF52 PlatformIO platform, nRF52832 nRF52 DK board profile, LIS2DH12 sensor driver, Python unittest/pytest for project structure verification.
 
@@ -13,18 +13,18 @@
 ## Global Constraints
 
 - The project must build with `pio run` using framework `zephyr`, board `nrf52_dk`, and PlatformIO CLI.
-- `zephyr/app.overlay` must define `gpio-leds` for P0.17/P0.18/P0.19, SPI1 on P0.13/P0.07/P0.08, CS P0.12, LIS2DH12 IRQ P0.03, and `accel0` alias.
-- `zephyr/prj.conf` must enable GPIO, SPI, SENSOR, LIS2DH, and LIS2DH trigger-none.
-- `src/main.c` must set LIS2DH12 ODR to 50 Hz, read `SENSOR_CHAN_ACCEL_XYZ` every 50 ms, and use `|axis| > 5.0` for RGB mapping.
+- `zephyr/app.overlay` must define `gpio-leds` for P0.17/P0.18/P0.19, I2C0 SCL P0.12/SDA P0.11, LIS2DH12 address 0x19, and `accel0` alias.
+- `zephyr/prj.conf` must enable GPIO, I2C, SENSOR, LIS2DH, and LIS2DH trigger-none.
+- `src/main.c` must set LIS2DH12 ODR to 50 Hz, read `SENSOR_CHAN_ACCEL_XYZ` every 150 ms, and map the dominant absolute axis to RGB.
 - NFC pins P0.09/P0.10 and future button pins P0.14/P0.15 must remain out of active GPIO configuration.
 - Documentation must include the QFN48 and LGA-12 pin maps, electrical parameters, SWD build/flash workflow, RGB behavior, and future wake lines.
 
 ## Review Focus
 
-- Missing sensor or LED readiness must trigger a visible red fast-blink error path, tested by inspecting the exact readiness checks and blink loop.
-- Wrong SPI pin/CS/IRQ configuration must fail project structure tests before build, pinned to exact DeviceTree properties and PSEL values.
-- ODR or 50 ms timing drift must remain explicit, pinned to `SENSOR_ATTR_SAMPLING_FREQUENCY`, 50 Hz, and `K_MSEC(50)`.
-- Active-low RGB logic must be preserved, pinned to `GPIO_ACTIVE_LOW`, GPIO output configuration, and per-axis threshold behavior.
+- Missing sensor or LED readiness must trigger a visible red error state.
+- Wrong I2C pins or address must fail project structure checks before build, pinned to TWIM PSEL values and `0x19`.
+- ODR and 150 ms timing drift must remain explicit, pinned to `SENSOR_ATTR_SAMPLING_FREQUENCY`, 50 Hz, and `k_msleep(150)`.
+- Active-low RGB logic must be preserved, pinned to `GPIO_ACTIVE_LOW` and dominant-axis behavior.
 - Documentation omissions must fail README/docs tests, pinned to complete pinout, flash commands, and wake-up future-use notes.
 
 ---
@@ -36,7 +36,7 @@
 
 - [ ] **Step 1: Write project structure tests**
 
-Create a unittest test class that resolves the repository root and `firmware/accelerometer-test`. Assert the overlay contains exact P0 LED pins, aliases, SPI1 pinctrl, CS, LIS2DH12 node compatibility/max frequency/IRQ/alias, prj.conf feature flags, main.c readiness checks and exact 50 Hz/50 ms/5.0 behavior, and README/docs hardware documentation markers.
+Create a unittest test class that resolves the repository root and `firmware/accelerometer-test`. Assert the overlay contains exact P0 LED pins, I2C0 pinctrl, LIS2DH12 address 0x19, aliases, prj.conf feature flags, main.c readiness checks, 50 Hz and 150 ms behavior, and README/docs hardware documentation markers.
 
 - [ ] **Step 2: Run the focused test and verify it fails**
 
@@ -63,15 +63,15 @@ Set `project(accelerometer_test)` while retaining `target_sources(app PRIVATE ..
 
 - [ ] **Step 3: Implement required Kconfig**
 
-Keep RTT diagnostics from the template, and add `CONFIG_GPIO=y`, `CONFIG_SPI=y`, `CONFIG_SENSOR=y`, `CONFIG_LIS2DH=y`, `CONFIG_LIS2DH_TRIGGER_NONE=y`.
+Keep RTT diagnostics from the template, and add `CONFIG_GPIO=y`, `CONFIG_I2C=y`, `CONFIG_SENSOR=y`, `CONFIG_LIS2DH=y`, `CONFIG_LIS2DH_TRIGGER_NONE=y`.
 
 - [ ] **Step 4: Add DeviceTree hardware nodes**
 
-Create `/aliases` entries `led-red`, `led-green`, `led-blue`, and `accel0`; create `gpio-leds` entries with P0.17/P0.18/P0.19 and `GPIO_ACTIVE_LOW`; configure `&spi1` and `&pinctrl` with P0.13 SCK, P0.07 MOSI, P0.08 MISO, P0.12 CS, and LIS2DH12 IRQ P0.03.
+Create `/aliases` entries `led-red`, `led-green`, `led-blue`, and `accel0`; create `gpio-leds` entries with P0.17/P0.18/P0.19 and `GPIO_ACTIVE_LOW`; configure `&i2c0` and `&pinctrl` with SCL P0.12, SDA P0.11 and LIS2DH12 address 0x19.
 
 - [ ] **Step 5: Implement the application**
 
-Verify the sensor and each LED spec with `device_is_ready`/`gpio_is_ready_dt`. Fast-blink the red LED on initialization failure. Set LIS2DH12 sampling frequency to 50 Hz. Every 50 ms, read one three-axis sensor value and independently set each LED according to whether `fabs`-style absolute X/Y/Z value exceeds 5.0 m/s^2.
+Verify the sensor and each LED spec with `device_is_ready`/`gpio_is_ready_dt`. Set LIS2DH12 sampling frequency to 50 Hz. Every 150 ms, read three-axis sensor values and set the RGB channel for the dominant absolute axis.
 
 - [ ] **Step 6: Run the focused test and verify it passes**
 
@@ -109,7 +109,7 @@ Expected: PASS for README and hardware document content.
 
 - [ ] **Step 1: Run the project build**
 
-Run: `uv run pio run --project-dir firmware\accelerometer-test -e nrf52_dk`
+Run: `uv run pio run --project-dir firmware/accelerometer-test -e nrf52_dk`
 Expected: Build completes without errors and warnings.
 
 - [ ] **Step 2: Run focused repository tests**

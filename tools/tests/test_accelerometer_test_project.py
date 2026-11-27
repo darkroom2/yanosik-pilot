@@ -14,7 +14,7 @@ class AccelerometerTestProject(unittest.TestCase):
         self.assertIn("framework = zephyr", platformio)
         self.assertTrue((self.project / "post_build_bin.py").is_file())
 
-    def test_overlay_disables_hardware_accelerometer_and_keeps_led_aliases(self):
+    def test_overlay_configures_i2c_accelerometer_and_led_aliases(self):
         overlay = (self.project / "zephyr" / "app.overlay").read_text()
 
         for pin_alias in ("led-red", "led-green", "led-blue"):
@@ -23,9 +23,12 @@ class AccelerometerTestProject(unittest.TestCase):
             self.assertIn(pin, overlay)
         self.assertIn("GPIO_ACTIVE_LOW", overlay)
 
+        self.assertIn("&i2c0 {", overlay)
+        self.assertIn("NRF_PSEL(TWIM_SCL, 0, 12)", overlay)
+        self.assertIn("NRF_PSEL(TWIM_SDA, 0, 11)", overlay)
+        self.assertIn("lis2dh12: lis2dh12@19 {", overlay)
+        self.assertIn('reg = <0x19>;', overlay)
         self.assertIn("&spi1 {\n\tstatus = \"disabled\";", overlay)
-        self.assertIn('lis2dh12: lis2dh@0 {', overlay)
-        self.assertIn('status = "disabled";', overlay)
         self.assertNotIn("cs-gpios =", overlay)
         self.assertIn("accel0 = &lis2dh12", overlay)
 
@@ -33,7 +36,7 @@ class AccelerometerTestProject(unittest.TestCase):
         prj_conf = (self.project / "zephyr" / "prj.conf").read_text()
         for setting in (
             "CONFIG_GPIO=y",
-            "CONFIG_SPI=y",
+            "CONFIG_I2C=y",
             "CONFIG_SENSOR=y",
             "CONFIG_LIS2DH=y",
             "CONFIG_LIS2DH_TRIGGER_NONE=y",
@@ -42,21 +45,18 @@ class AccelerometerTestProject(unittest.TestCase):
         ):
             self.assertIn(setting, prj_conf)
 
-    def test_application_scans_only_accelerometer_pins_over_spi_and_i2c(self):
+    def test_application_reads_accelerometer_over_i2c(self):
         main = (self.project / "src" / "main.c").read_text()
-        self.assertIn("static const uint8_t pins[] = { 3, 4, 7, 8, 12, 13 };", main)
-        self.assertIn("k_busy_wait(2)", main)
-        self.assertIn("0x8F", main)
-        self.assertIn("0x33", main)
-        self.assertIn("0x20, 0x57", main)
-        self.assertIn("0xA0", main)
-        self.assertIn("SPI HIT!", main)
-        self.assertIn("I2C HIT!", main)
-        self.assertIn("Koniec skanu. Trafienia: %d", main)
-        self.assertNotIn("P0.05", main)
-        self.assertNotIn("P0.06", main)
+        self.assertIn("SENSOR_CHAN_ACCEL_XYZ", main)
+        self.assertIn("SENSOR_ATTR_SAMPLING_FREQUENCY", main)
+        self.assertIn(".val1 = 50", main)
+        self.assertIn("k_msleep(150)", main)
+        self.assertIn("0x19", main)
+        self.assertIn("SCL=P0.12", main)
+        self.assertIn("SDA=P0.11", main)
         self.assertIn("DT_ALIAS(led_red)", main)
         self.assertIn("DT_ALIAS(led_green)", main)
+        self.assertIn("DT_ALIAS(led_blue)", main)
 
     def test_documentation_covers_pinout_build_flash_and_wake_future(self):
         hardware = self.project / "docs" / "hardware.md"
@@ -67,8 +67,8 @@ class AccelerometerTestProject(unittest.TestCase):
         hardware_text = hardware.read_text()
         for required in (
             "nRF52832", "QFN48", "LIS2DH12", "LGA-12",
-            "P0.17", "P0.18", "P0.19", "P0.13", "P0.12",
-            "P0.08", "P0.07", "P0.04", "P0.03", "P0.14", "P0.15",
+            "P0.17", "P0.18", "P0.19", "P0.12", "P0.11",
+            "0x19", "P0.04", "P0.03", "P0.14", "P0.15",
             "P0.09", "P0.10", "510", "100",
         ):
             self.assertIn(required, hardware_text)

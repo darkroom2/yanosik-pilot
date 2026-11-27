@@ -3,13 +3,12 @@
 ## Overview
 
 The pilot uses a Nordic nRF52832 in a QFN48 package. The application target is
-ST LIS2DH12 in an LGA-12 package, connected through the 4-wire SPI interface,
+ST LIS2DH12 in an LGA-12 package, connected through I2C at address 0x19,
 and an RGB LED with a common anode. The ESP32_nRF52_SWD programmer provides
 SWD flashing and target reset.
 
-> The application is a diagnostic GPIO pin scanner. It checks only P0.03,
-> P0.04, P0.07, P0.08, P0.12 and P0.13. P0.05 and P0.06 are buzzer pins and
-> are never configured or touched.
+> The application uses I2C: SCL P0.12 and SDA P0.11. P0.05 and P0.06 remain
+> reserved buzzer pins and are not configured.
 
 ## nRF52832 QFN48
 
@@ -20,10 +19,8 @@ physical button inputs.
 
 | MCU physical pin | Port | Device pin / function | Direction | Zephyr / electrical parameter |
 |---|---|---|---|---|
-| 7 | P0.05 | LIS2DH12 CS | Output | SPI chip select, GPIO_ACTIVE_LOW |
-| 9 | P0.07 | LIS2DH12 SDA/SDI/MOSI | Output | SPI MOSI, 3.3 V logic; P0.13 is fallback only |
-| 10 | P0.08 | LIS2DH12 SDO/SA0/MISO | Input | SPI MISO, 3.3 V logic |
-| 14 | P0.12 | LIS2DH12 SCL/SPC/SCK | Output | SPI clock, Mode 3, 1 MHz maximum |
+| 14 | P0.12 | LIS2DH12 SCL/SPC | Bidirectional | I2C SCL, Nordic TWIM, 100 kHz |
+| 13 | P0.11 | LIS2DH12 SDA/SDI/SDO | Bidirectional | I2C SDA, address 0x19, Nordic TWIM |
 | 12/13 MCU pins | P0.10/P0.09 | NFC1/NFC2 | Reserved | Capacitors to GND; NFC UICR handling required before GPIO use |
 | 16 | P0.14 | Physical button 1 | Input | Reserved; future deep-sleep wake input |
 | 17 | P0.15 | Physical button 2 | Input | Reserved; future deep-sleep wake input |
@@ -35,19 +32,19 @@ physical button inputs.
 
 | LGA-12 pin | Package marking | nRF52832 connection | Function |
 |---|---|---|---|
-| 1 | SPC/SCL | P0.12 | SPI_SCK |
-| 2 | CS | P0.05 | SPI chip select, active low |
-| 3 | SDO/SA0 | P0.08 | SPI_MISO |
-| 4 | SDA/SDI | P0.07 | SPI_MOSI |
+| 1 | SPC/SCL | P0.12 | I2C SCL |
+| 2 | CS | VDD_IO | I2C mode selected |
+| 3 | SDO/SA0 | VDD_IO | Sets I2C address 0x19 |
+| 4 | SDA/SDI | P0.11 | I2C SDA |
 | 5 | INT1 | P0.03 | Interrupt1, GPIO_ACTIVE_HIGH |
 | 6 | INT2 | P0.04 | Interrupt2, reserved |
 | 7 | VDD_IO | 3.3 V | Digital interface supply with decoupling to GND |
 | 8 | VDD | 3.3 V | Sensor supply with decoupling to GND |
 | 9-14 | GND/reserved | GND | Ground and reserved pins per board layout; tie reserved pins to GND |
 
-The DeviceTree entry is `lis2dh12: lis2dh@0`, compatible with `"st,lis2dh"`,
-under `&spi1`, with a maximum SPI frequency of 1 MHz. Zephyr alias `accel0`
-references this node.
+The DeviceTree entry is `lis2dh12: lis2dh12@19`, compatible with
+`"st,lis2dh"`, under `&i2c0`, with `reg = <0x19>` and a 100 kHz bus.
+Zephyr alias `accel0` references this node.
 
 ## RGB LED
 
@@ -64,15 +61,17 @@ channels:
 ## Accelerometer Software Behavior
 
 The application sets the LIS2DH12 sampling frequency to 50 Hz and reads
-`SENSOR_CHAN_ACCEL_XYZ` every 50 ms. A channel is switched on when the absolute
-acceleration on its axis exceeds 5.0 m/s², approximately 0.5 g:
+`SENSOR_CHAN_ACCEL_XYZ` every 150 ms. The axis with the largest absolute
+acceleration controls the RGB channel:
 
 - X axis -> red,
 - Y axis -> green,
 - Z axis -> blue.
 
-Initialization errors are indicated by fast red LED blinking. Sensor reads,
-ODR configuration, and LED readiness are checked and logged through RTT.
+Sensor and LED readiness are checked and logged through RTT.
+
+Hardware verification confirmed I2C XYZ reads after SWD transfer and reset:
+dominant X lights red, dominant Y lights green, and dominant Z lights blue.
 
 ## Future Wake-Up Architecture
 
@@ -88,7 +87,7 @@ NFC-reserved or have NFC disabled in UICR before GPIO reuse.
 Build:
 
 ```powershell
-pio run --project-dir firmware\accelerometer-test -e nrf52_dk
+uv run pio run --project-dir firmware/accelerometer-test -e nrf52_dk
 ```
 
 Upload through PlatformIO:

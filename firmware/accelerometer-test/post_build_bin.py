@@ -1,4 +1,3 @@
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -6,46 +5,30 @@ from pathlib import Path
 Import("env")
 
 
-def find_ninja(env):
-    ninja = shutil.which("ninja")
-    if ninja:
-        return ninja
-
-    ninja = env.WhereIs("ninja")
-    if ninja:
-        return ninja
-
-    roots = [
-        env.subst("$PIOHOME_DIR"),
-        os.environ.get("PLATFORMIO_CORE_DIR"),
-        str(Path.home() / ".platformio"),
-    ]
-    names = ("ninja.exe", "ninja")
-    for root in roots:
-        if not root:
-            continue
-        package_dir = Path(root)
-        if package_dir.name != "packages":
-            package_dir /= "packages"
-        package_dir /= "tool-ninja"
-        for name in names:
-            candidates = list(package_dir.rglob(name))
-            if candidates:
-                return str(candidates[0])
-
-    return None
-
-
 def copy_zephyr_bin(source, target, env):
     build_dir = Path(env.subst("$BUILD_DIR"))
-    zephyr_bin = build_dir / "zephyr" / "zephyr.bin"
+    elf_file = build_dir / "firmware.elf"
+    zephyr_dir = build_dir / "zephyr"
+    zephyr_bin = zephyr_dir / "zephyr.bin"
 
-    ninja = find_ninja(env)
-    if not ninja:
-        raise RuntimeError("Ninja executable was not found")
+    objcopy = shutil.which(env.subst("$OBJCOPY"))
+    if not objcopy:
+        objcopy = env.WhereIs(env.subst("$OBJCOPY"))
+    if not objcopy:
+        raise RuntimeError("ARM objcopy executable was not found")
 
+    zephyr_dir.mkdir(parents=True, exist_ok=True)
     subprocess.run(
-        [ninja, "-C", str(build_dir), "zephyr/zephyr.bin"],
+        [
+            objcopy,
+            "--gap-fill",
+            "0xFF",
+            "--output-target=binary",
+            "--remove-section=.comment",
+            "--remove-section=COMMON",
+            str(elf_file),
+            str(zephyr_bin),
+        ],
         check=True,
     )
 

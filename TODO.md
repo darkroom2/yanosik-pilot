@@ -2,18 +2,15 @@
 
 ## Namierzanie pinów akcelerometru
 
-- [ ] Poszerzyć testy sprzętowe dla akcelerometru LIS2DH i ustalić jego rzeczywiste
-  połączenia z nRF52832.
-- [ ] Sprawdzić podłączenie magistrali I2C lub SPI oraz zidentyfikować piny SDA/SDO,
-  SCL/SCK i CS.
+- [x] Potwierdzić podłączenie magistrali I2C LIS2DH12:
+  SCL P0.12, SDA P0.11, adres 0x19.
+- [x] Potwierdzić funkcję SA0/SDO podciągniętej do VDD_IO.
+- [x] Zweryfikować fizycznie odczyty X/Y/Z i zmianę kolorów RGB na płytce:
+  dominacja X -> czerwony, Y -> zielony, Z -> niebieski.
 - [ ] Odszukać i potwierdzić sygnał wybudzenia akcelerometru, jeśli jest podłączony
-  do osobnego pinu nRF52.
-- [ ] Rozszerzyć `tools/hardware_test.py` o tryb skanujący potencjalne kombinacje
-  pinów magistrali i wyświetlający wynik każdego wariantu.
-- [ ] Dodać testy komunikacyjne dla odczytu identyfikatora LIS2DH i podstawowych
-  rejestrów czujnika.
-- [ ] Zapisać potwierdzone mapowanie pinów w README.md wraz z napięciami logicznymi
-  i sterowanymi liniami.
+  do INT1/INT2 lub innemu pinowi nRF52.
+- [ ] Dodać testy komunikacyjne sprawdzające WHO_AM_I, rejestry CTRL i odczyt XYZ
+  przez oficjalny sterownik Zephyr.
 
 ## Buzzer
 

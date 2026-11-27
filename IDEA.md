@@ -48,6 +48,9 @@ oraz protokół BTHome.
 Wbudowany 3-osiowy akcelerometr **LIS2DH** pozwala rozszerzyć funkcje pilota
 poza same przyciski oraz znacząco ograniczyć zużycie energii:
 
+- Magistrala I2C została potwierdzona: `SCL=P0.12`, `SDA=P0.11`,
+  `ADDR=0x19`, częstotliwość 100 kHz.
+
 - **Oszczędzanie energii (Wake-on-Motion)** – usypianie nRF52832 w głębokim śnie
   i wybudzanie przerwaniem z LIS2DH po wykryciu ruchu lub podniesienia pilota,
   co wydłuża czas pracy na baterii CR2450.

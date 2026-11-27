@@ -67,6 +67,8 @@ zarządzanie poborem energii.
 |---|---|---|
 | 7 | P0.05 | Jeden biegun buzzera; podłączenie różnicowe / mostkowe |
 | 8 | P0.06 | Drugi biegun buzzera; podłączenie różnicowe / mostkowe |
+| 14 | P0.11 | Linia SDA akcelerometru LIS2DH12; I2C 100 kHz |
+| 13 | P0.12 | Linia SCL akcelerometru LIS2DH12; I2C 100 kHz |
 | 16 | P0.13 | Przycisk nr 1; styk zwiera do masy, wejście `INPUT_PULLUP` |
 | 17 | P0.14 | Przycisk nr 2; styk zwiera do masy, wejście `INPUT_PULLUP` |
 | 20 | P0.17 | Czerwona dioda LED, rezystor 510 Ω; anoda wspólna, świeci przy stanie niski |
@@ -77,8 +79,9 @@ zarządzanie poborem energii.
 
 - Nie zidentyfikowano jeszcze układu podbijającego napięcie używanego przez
   buzzer.
-- Nie zidentyfikowano jeszcze podłączeń akcelerometru LIS2DH, w tym magistrali
-  komunikacyjnej i sygnału wybudzenia.
+- Akcelerometr LIS2DH12 działa jako I2C pod adresem `0x19`:
+  SCL `P0.12`, SDA `P0.11`. Linia SA0/SDO jest podciągnięta do VDD_IO.
+  Sygnal wybudzenia nie został jeszcze przetestowany.
 - Nie potwierdzono ostatecznej funkcji fizycznych pinów przycisków poza ich
   przypisaniem do P0.13 i P0.14.
 - Nie potwierdzono istnienia obwodu NFC ani cewki NFC na płytce. nRF52832 ma
@@ -467,17 +470,17 @@ curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 
 #### `firmware/accelerometer-test`
 
-Projekt `firmware/accelerometer-test` testuje akcelerometr LIS2DH12 podłączony
-do SPI1 nRF52832 oraz wspólną anodową diodę RGB. Potwierdzone połączenia to
-SCK P0.12, MOSI P0.07, MISO P0.08 i CS P0.05. X, Y i Z mapują się odpowiednio
-na czerwony, zielony i niebieski kanał po przekroczeniu progu 5.0 m/s².
+Projekt `firmware/accelerometer-test` odczytuje akcelerometr LIS2DH12 przez
+sprzętowe I2C nRF52832 oraz steruje wspólną anodową diodą RGB. Potwierdzone
+połączenia to SCL P0.12 i SDA P0.11, adres I2C 0x19. Dominująca oś X, Y lub Z
+mapuje się odpowiednio na czerwony, zielony lub niebieski kanał.
 Konfigurację pinów i urządzeń opisuje
 [docs/hardware.md](firmware/accelerometer-test/docs/hardware.md).
 
 Zbuduj projekt:
 
 ```powershell
-uv run pio run --project-dir firmware\accelerometer-test -e nrf52_dk
+uv run pio run --project-dir firmware/accelerometer-test -e nrf52_dk
 ```
 
 Wynikowy plik BIN:
@@ -715,8 +718,8 @@ python tools/hardware_test.py --host http://swd.local --duration 0.5
 ## Planowane prace
 
 Bieżąca lista zadań, znanych ograniczeń i kierunków dalszych badań znajduje się
-w [`TODO.md`](TODO.md). Priorytetem jest poszerzenie testów umożliwiających
-namierzenie pinów akcelerometru LIS2DH.
+w [`TODO.md`](TODO.md). Priorytetem są testy wybudzania LIS2DH12, obsługi
+INT1/INT2 oraz weryfikacja odczytów X/Y/Z na fizycznej płytce.
 
 ## Archiwum fabrycznego firmware
 
