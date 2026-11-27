@@ -14,7 +14,7 @@ class AccelerometerTestProject(unittest.TestCase):
         self.assertIn("framework = zephyr", platformio)
         self.assertTrue((self.project / "post_build_bin.py").is_file())
 
-    def test_overlay_disables_spi_and_accelerometer_for_diagnostic_scan(self):
+    def test_overlay_disables_hardware_accelerometer_and_keeps_led_aliases(self):
         overlay = (self.project / "zephyr" / "app.overlay").read_text()
 
         for pin_alias in ("led-red", "led-green", "led-blue"):
@@ -23,14 +23,10 @@ class AccelerometerTestProject(unittest.TestCase):
             self.assertIn(pin, overlay)
         self.assertIn("GPIO_ACTIVE_LOW", overlay)
 
-        self.assertIn("&spi1 {\n\tstatus = \"okay\";", overlay)
-        self.assertIn("lis2dh12: lis2dh@0", overlay)
+        self.assertIn("&spi1 {\n\tstatus = \"disabled\";", overlay)
         self.assertIn('lis2dh12: lis2dh@0 {', overlay)
-        self.assertIn('status = "okay";', overlay)
-        self.assertIn("NRF_PSEL(SPIM_SCK, 0, 12)", overlay)
-        self.assertIn("NRF_PSEL(SPIM_MOSI, 0, 7)", overlay)
-        self.assertIn("NRF_PSEL(SPIM_MISO, 0, 8)", overlay)
-        self.assertIn("cs-gpios = <&gpio0 5 GPIO_ACTIVE_LOW>", overlay)
+        self.assertIn('status = "disabled";', overlay)
+        self.assertNotIn("cs-gpios =", overlay)
         self.assertIn("accel0 = &lis2dh12", overlay)
 
     def test_kconfig_enables_required_drivers(self):
@@ -46,14 +42,19 @@ class AccelerometerTestProject(unittest.TestCase):
         ):
             self.assertIn(setting, prj_conf)
 
-    def test_application_scans_spi_permutations_and_optional_i2c(self):
+    def test_application_scans_only_accelerometer_pins_over_spi_and_i2c(self):
         main = (self.project / "src" / "main.c").read_text()
-        self.assertIn("gpio_is_ready_dt", main)
-        self.assertIn("DEVICE_DT_GET(DT_ALIAS(accel0))", main)
-        self.assertIn("SENSOR_ATTR_SAMPLING_FREQUENCY", main)
-        self.assertIn("SENSOR_CHAN_ACCEL_XYZ", main)
-        self.assertIn("K_MSEC(100)", main)
-        self.assertIn("5.0", main)
+        self.assertIn("static const uint8_t pins[] = { 3, 4, 7, 8, 12, 13 };", main)
+        self.assertIn("k_busy_wait(2)", main)
+        self.assertIn("0x8F", main)
+        self.assertIn("0x33", main)
+        self.assertIn("0x20, 0x57", main)
+        self.assertIn("0xA0", main)
+        self.assertIn("SPI HIT!", main)
+        self.assertIn("I2C HIT!", main)
+        self.assertIn("Koniec skanu. Trafienia: %d", main)
+        self.assertNotIn("P0.05", main)
+        self.assertNotIn("P0.06", main)
         self.assertIn("DT_ALIAS(led_red)", main)
         self.assertIn("DT_ALIAS(led_green)", main)
 

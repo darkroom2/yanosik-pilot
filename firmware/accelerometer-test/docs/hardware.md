@@ -7,8 +7,9 @@ ST LIS2DH12 in an LGA-12 package, connected through the 4-wire SPI interface,
 and an RGB LED with a common anode. The ESP32_nRF52_SWD programmer provides
 SWD flashing and target reset.
 
-> The final configuration uses Zephyr SPI1 in 4-wire Mode 3 and the LIS2DH12
-> sensor driver. The diagnostic GPIO pin scanner is no longer part of the application.
+> The application is a diagnostic GPIO pin scanner. It checks only P0.03,
+> P0.04, P0.07, P0.08, P0.12 and P0.13. P0.05 and P0.06 are buzzer pins and
+> are never configured or touched.
 
 ## nRF52832 QFN48
 

@@ -22,16 +22,14 @@
 };
 
 &spi1 {
-	compatible = "nordic,nrf-spi";
-	status = "okay";
+	status = "disabled";
 	pinctrl-0 = <&spi1_default>;
 	pinctrl-1 = <&spi1_sleep>;
 	pinctrl-names = "default", "sleep";
-	cs-gpios = <&gpio0 5 GPIO_ACTIVE_LOW>;
 
 	lis2dh12: lis2dh@0 {
 		compatible = "st,lis2dh";
-		status = "okay";
+		status = "disabled";
 		reg = <0>;
 		spi-max-frequency = <1000000>;
 	};

@@ -1,8 +1,8 @@
 # Zephyr LIS2DH12 Accelerometer Test
 
-Projekt zawiera docelową aplikację testową LIS2DH12TR przez sprzętowe SPI1.
-Potwierdzone połączenia: SCK P0.12, MOSI P0.07, MISO P0.08 i CS P0.05.
-Program odczytuje trzy osie przyspieszenia i wskazuje przechył kanałami RGB.
+Projekt zawiera deterministyczny skaner diagnostyczny LIS2DH12TR.
+Przeglądane są wyłącznie piny P0.03, P0.04, P0.07, P0.08, P0.12 i P0.13.
+Piny P0.05 i P0.06 buzzera oraz pozostałe GPIO nie są konfigurowane przez skaner.
 
 ## Budowanie
 
