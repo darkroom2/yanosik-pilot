@@ -23,6 +23,7 @@ Projekt zawiera narzędzia do:
     - [`firmware/ble-test`](#firmwareble-test)
     - [`firmware/buzzer-test`](#firmwarebuzzer-test)
     - [`firmware/ble-zephyr`](#firmwareble-zephyr)
+     - [`firmware/zephyr-template`](#firmwarezephyr-template)
 - [Testowanie firmware](#testowanie-firmware)
 - [Test mapowania sprzętu](#test-mapowania-sprzętu)
 - [Planowane prace](#planowane-prace)
@@ -428,6 +429,40 @@ curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 Potwierdzenie sprzętowe wymaga zaobserwowania rozgłaszania `nRF52_Zephyr_BLE`
 skanerem BLE po zresetowaniu celu. Pomyślna kompilacja i odpowiedź HTTP 200
 same w sobie nie potwierdzają działania radio.
+
+#### `firmware/zephyr-template`
+
+Projekt `firmware/zephyr-template` jest neutralnym szablonem aplikacji Zephyr
+dla płytki nRF52 DK. Po uruchomieniu loguje komunikat startowy przez SEGGER
+RTT i przełącza LED0 raz na sekundę. Nie zawiera stosu Bluetooth ani logiki
+konkretnego urządzenia, dzięki czemu można go skopiować jako punkt startowy
+nowego projektu firmware.
+
+Skopiuj cały katalog `firmware/zephyr-template`, nadaj mu nazwę nowego projektu
+i zaktualizuj `project(...)` w `zephyr/CMakeLists.txt`. Własne moduły dodawaj
+poprzez `target_sources(app PRIVATE ...)`; konfigurację RTT pozostaw w
+`zephyr/prj.conf`, chyba że nowy projekt świadomie zmienia sposób diagnostyki.
+
+Zbuduj szablon środowiskiem `nrf52_dk`:
+
+```powershell
+uv run pio run --project-dir firmware\zephyr-template -e nrf52_dk
+```
+
+Wynikowy plik BIN:
+
+```text
+firmware/zephyr-template/.pio/build/nrf52_dk/zephyr/zephyr.bin
+```
+
+Wgraj plik BIN przez istniejące API ESP32/SWD i zresetuj cel:
+
+```powershell
+curl -X POST "http://swd.local/set_swd?cmd=init"
+curl -X POST "http://swd.local/set_swd?cmd=erase_all"
+curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/zephyr-template/.pio/build/nrf52_dk/zephyr/zephyr.bin" http://swd.local/flash_file_direct
+curl -X POST "http://swd.local/set_swd?cmd=set_reset"
+```
 
 TODO: poprawic skrypt i wywalic te sekcje 
 Zweryfikowany sposób odczytu logów SEGGER RTT przez ESP32/SWD:
