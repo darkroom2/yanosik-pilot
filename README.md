@@ -24,6 +24,7 @@ Projekt zawiera narzędzia do:
     - [`firmware/buzzer-test`](#firmwarebuzzer-test)
     - [`firmware/ble-zephyr`](#firmwareble-zephyr)
      - [`firmware/zephyr-template`](#firmwarezephyr-template)
+     - [`firmware/accelerometer-test`](#firmwareaccelerometer-test)
 - [Testowanie firmware](#testowanie-firmware)
 - [Test mapowania sprzętu](#test-mapowania-sprzętu)
 - [Planowane prace](#planowane-prace)
@@ -461,6 +462,36 @@ Wgraj plik BIN przez istniejące API ESP32/SWD i zresetuj cel:
 curl -X POST "http://swd.local/set_swd?cmd=init"
 curl -X POST "http://swd.local/set_swd?cmd=erase_all"
 curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/zephyr-template/.pio/build/nrf52_dk/zephyr/zephyr.bin" http://swd.local/flash_file_direct
+curl -X POST "http://swd.local/set_swd?cmd=set_reset"
+```
+
+#### `firmware/accelerometer-test`
+
+Projekt `firmware/accelerometer-test` testuje akcelerometr LIS2DH12 podłączony
+do SPI1 nRF52832 oraz wspólną anodową diodę RGB. Potwierdzone połączenia to
+SCK P0.12, MOSI P0.07, MISO P0.08 i CS P0.05. X, Y i Z mapują się odpowiednio
+na czerwony, zielony i niebieski kanał po przekroczeniu progu 5.0 m/s².
+Konfigurację pinów i urządzeń opisuje
+[docs/hardware.md](firmware/accelerometer-test/docs/hardware.md).
+
+Zbuduj projekt:
+
+```powershell
+uv run pio run --project-dir firmware\accelerometer-test -e nrf52_dk
+```
+
+Wynikowy plik BIN:
+
+```text
+firmware/accelerometer-test/.pio/build/nrf52_dk/zephyr/zephyr.bin
+```
+
+Wgraj przez ESP32/SWD i zresetuj cel:
+
+```powershell
+curl -X POST "http://swd.local/set_swd?cmd=init"
+curl -X POST "http://swd.local/set_swd?cmd=erase_all"
+curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/accelerometer-test/.pio/build/nrf52_dk/zephyr/zephyr.bin" http://swd.local/flash_file_direct
 curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 ```
 
