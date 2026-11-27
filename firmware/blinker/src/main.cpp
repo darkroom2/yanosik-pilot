@@ -2,9 +2,9 @@
 
 #include "blinker_logic.h"
 
-// nRF52DK Arduino pin indices: D2/D3 are P0.13/P0.14, D6-D8 are P0.17-P0.19.
-constexpr uint8_t buttonNextColorPin = 2;
-constexpr uint8_t buttonPausePin = 3;
+// nRF52DK variant: D3/D4 map to P0.14/P0.15; D6-D8 map to P0.17-P0.19.
+constexpr uint8_t buttonNextColorPin = 3;
+constexpr uint8_t buttonPausePin = 4;
 constexpr uint8_t redLedPin = 6;
 constexpr uint8_t greenLedPin = 7;
 constexpr uint8_t blueLedPin = 8;

@@ -12,11 +12,19 @@
 - [ ] Dodać testy komunikacyjne sprawdzające WHO_AM_I, rejestry CTRL i odczyt XYZ
   przez oficjalny sterownik Zephyr.
 
+## Przyciski
+
+- [x] Potwierdzić mapowanie przycisków na P0.14/P0.15 (potwierdzone przez
+  użytkownika).
+
 ## Buzzer
 
 - [x] Potwierdzić fizyczne mapowanie buzzera: pin 7 -> P0.05, pin 8 -> P0.06.
 - [ ] Zidentyfikować układ podbijania napięcia używany przez buzzer.
-- [ ] Zweryfikować sprzętowo ton i ciszę projektu `firmware/buzzer-test`.
+- [ ] Zweryfikować sprzętowo regulację 3000–5000 Hz, przeciwfazę P0.05/P0.06,
+  H0H1 oraz kolorami LED zakresy częstotliwości projektu `firmware/buzzer-test`.
+- [ ] Wyznaczyć rezonans urządzenia TM-090918 i zapisać potwierdzoną częstotliwość
+  oraz wynik pomiaru decybelomierzem.
 - [ ] Dodać dwukierunkową sygnalizację stanów przez buzzer i diodę/LED:
   zdarzenia wychodzące z pilota do Home Assistant oraz potwierdzenia lub stany
   przychodzące z Home Assistant lub innych systemów.

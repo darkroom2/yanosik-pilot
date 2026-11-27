@@ -12,8 +12,8 @@ P0_OUTSET = P0_BASE + 0x508
 P0_OUTCLR = P0_BASE + 0x50C
 P0_IN = P0_BASE + 0x510
 P0_DIRSET = P0_BASE + 0x518
-P0_PIN_CNF13 = P0_BASE + 0x734
 P0_PIN_CNF14 = P0_BASE + 0x738
+P0_PIN_CNF15 = P0_BASE + 0x73C
 
 ALLOWED_COMMANDS = {
     "init",
@@ -121,32 +121,32 @@ def test_leds(host, duration):
 
 
 def test_buttons(host):
-    swd_write(host, P0_PIN_CNF13, 0x0C)
     swd_write(host, P0_PIN_CNF14, 0x0C)
+    swd_write(host, P0_PIN_CNF15, 0x0C)
     time.sleep(0.1)
 
     released = swd_read(host, P0_IN)
     print(f"P0 IN with both released: 0x{released:08X}")
-    bit13_released = input_bit(released, 13)
     bit14_released = input_bit(released, 14)
+    bit15_released = input_bit(released, 15)
 
-    print("Press and hold button #1 (P0.13 / Pin 16), then press Enter.")
+    print("Press and hold button #1 (P0.14 / Pin 17), then press Enter.")
     input()
     held1 = swd_read(host, P0_IN)
     print(f"P0 IN with button #1 held: 0x{held1:08X}")
 
-    print("Release button #1 and press and hold button #2 (P0.14 / Pin 17), then press Enter.")
+    print("Release button #1 and press and hold button #2 (P0.15 / Pin 18), then press Enter.")
     input()
     held2 = swd_read(host, P0_IN)
     print(f"P0 IN with button #2 held: 0x{held2:08X}")
 
     return {
-        "P0_13_released": bit13_released,
         "P0_14_released": bit14_released,
-        "P0_13_held": input_bit(held1, 13),
-        "P0_14_held": input_bit(held2, 14),
-        "P0_13_bit_mask": 1 << 13,
+        "P0_15_released": bit15_released,
+        "P0_14_held": input_bit(held1, 14),
+        "P0_15_held": input_bit(held2, 15),
         "P0_14_bit_mask": 1 << 14,
+        "P0_15_bit_mask": 1 << 15,
         "raw_released": f"0x{released:08X}",
         "raw_button1": f"0x{held1:08X}",
         "raw_button2": f"0x{held2:08X}",

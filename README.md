@@ -69,8 +69,8 @@ zarządzanie poborem energii.
 | 8 | P0.06 | Drugi biegun buzzera; podłączenie różnicowe / mostkowe |
 | 14 | P0.11 | Linia SDA akcelerometru LIS2DH12; I2C 100 kHz |
 | 13 | P0.12 | Linia SCL akcelerometru LIS2DH12; I2C 100 kHz |
-| 16 | P0.13 | Przycisk nr 1; styk zwiera do masy, wejście `INPUT_PULLUP` |
-| 17 | P0.14 | Przycisk nr 2; styk zwiera do masy, wejście `INPUT_PULLUP` |
+| 17 | P0.14 | Przycisk nr 1; styk zwiera do masy, wejście `INPUT_PULLUP` |
+| 18 | P0.15 | Przycisk nr 2; styk zwiera do masy, wejście `INPUT_PULLUP` |
 | 20 | P0.17 | Czerwona dioda LED, rezystor 510 Ω; anoda wspólna, świeci przy stanie niski |
 | 21 | P0.18 | Zielony kanał diody RGB, rezystor 100 Ω; anoda wspólna, świeci przy stanie niski |
 | 22 | P0.19 | Niebieski kanał diody RGB, rezystor 100 Ω; anoda wspólna, świeci przy stanie niski |
@@ -82,8 +82,8 @@ zarządzanie poborem energii.
 - Akcelerometr LIS2DH12 działa jako I2C pod adresem `0x19`:
   SCL `P0.12`, SDA `P0.11`. Linia SA0/SDO jest podciągnięta do VDD_IO.
   Sygnal wybudzenia nie został jeszcze przetestowany.
-- Nie potwierdzono ostatecznej funkcji fizycznych pinów przycisków poza ich
-  przypisaniem do P0.13 i P0.14.
+- Potwierdzone piny przycisków to P0.14 i P0.15; szczegółowe role przycisków
+  `+`/`-` w docelowym firmware pozostają do ustalenia.
 - Nie potwierdzono istnienia obwodu NFC ani cewki NFC na płytce. nRF52832 ma
   wejścia NFC1/NFC2 na P0.09 i P0.10, ale ich obecność zależy od połączeń PCB
   i konfiguracji UICR `NFCPINS`.
@@ -268,12 +268,13 @@ Ten szkic testuje LED RGB i dwa przyciski:
 - przycisk 1 zmienia kolor w kolejności czerwony → zielony → niebieski;
 - przycisk 2 zatrzymuje miganie (LED gaśnie) i wznawia je w wybranym kolorze.
 
-Wariant Arduino `nRF52DK` używa następujących pinów:
+Wariant Arduino `nRF52DK` mapuje przyciski D3/D4 na P0.14/P0.15, a kanały LED
+D6-D8 na P0.17-P0.19:
 
 | Funkcja | Port nRF52 | Pin Arduino |
 |---|---|---|
-| Przycisk zmiany koloru | P0.13 | D2 |
-| Przycisk pauzy | P0.14 | D3 |
+| Przycisk zmiany koloru | P0.14 | D3 |
+| Przycisk pauzy | P0.15 | D4 |
 | Czerwony kanał LED | P0.17 | D6 |
 | Zielony kanał LED | P0.18 | D7 |
 | Niebieski kanał LED | P0.19 | D8 |
@@ -362,21 +363,29 @@ build lub odpowiedź HTTP 200 nie potwierdzają działania radio.
 
 #### `firmware/buzzer-test`
 
-Projekt `firmware/buzzer-test` używa frameworka Zephyr i sprzętowego PWM do
-testu różnicowego podłączenia buzzera:
+Projekt `firmware/buzzer-test` używa bezpośredniego sterownika nrfx PWM 0 do
+precyzyjnego dobierania częstotliwości TAIMI TM-090918:
 
 | Funkcja | Port nRF52 | Fizyczny pin |
 |---|---|---|
 | Kanał A buzzera | P0.05 / GPIO 5 | 7 |
 | Kanał B buzzera | P0.06 / GPIO 6 | 8 |
+| Zwiększenie częstotliwości | P0.14 / GPIO 14 | 17 |
+| Zmniejszenie częstotliwości | P0.15 / GPIO 15 | 18 |
+| LED czerwony | P0.17 / GPIO 17 | 20 |
+| LED zielony | P0.18 / GPIO 18 | 21 |
+| LED niebieski | P0.19 / GPIO 19 | 22 |
 
-PWM0 generuje ton 2 kHz z wypełnieniem 50% na obu kanałach. Drugi kanał ma
-odwróconą polaryzację, więc sygnał jest sterowany przeciwfazowo. Ton trwa
-500 ms, następnie następuje cisza przez 1000 ms. W stanie ciszy oba kanały
-ustawiają się tak, aby nie utrzymywać różnicy potencjałów.
+PWM0 działa z zegarem 16 MHz i wypełnieniem 50%. Kanał P0.06 ma ustawioną
+sprzętową przeciwfazę 180°, a oba wyjścia używają trybu pinowego `H0H1`.
+Częstotliwość startuje na 4000 Hz i jest regulowana przyciskami P0.14/P0.15
+co 50 Hz w zakresie 3000–5000 Hz. Aktualna częstotliwość jest wypisywana przez
+`printk()`. Niebieski LED oznacza zakres poniżej 3900 Hz, zielony zakres
+3900–4100 Hz, a czerwony zakres powyżej 4100 Hz. Przy limicie wszystkie kanały
+LED świecą krótko jako biały akcent.
 
-UART0 i standardowe wejście/wyjście konsoli są wyłączone w celu zwolnienia
-P0.05 i P0.06. Diagnostykę można realizować przez RTT.
+Węzeł `&pwm0` jest wyłączony w overlay; nrfx PWM steruje rejestrem PWM0 bez
+konfliktu ze sterownikiem Zephyr.
 
 Zbuduj projekt środowiskiem `nrf52_dk`:
 
@@ -710,7 +719,7 @@ python tools/hardware_test.py --host http://swd.local --duration 0.5
 ### Dostępne opcje
 
 - `--led-only` — test pinów P0.17, P0.18 i P0.19;
-- `--button-only` — test pinów P0.13 i P0.14;
+- `--button-only` — test pinów P0.14 i P0.15;
 - `--buzzer-only` — test wskazanych pinów buzzera;
 - `--buzzer-pins 5,6` — potwierdzone piny różnicowe buzzera P0.05 i P0.06;
 - `--output mapping.json` — zapis wyniku testu do pliku JSON.

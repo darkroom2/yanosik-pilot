@@ -14,16 +14,16 @@ SWD flashing and target reset.
 
 The MCU supply is 3.3 V. Pins P0.09 and P0.10 are NFC1/NFC2 on pins 12 and 13
 and are routed through capacitors to GND. They must not be used as ordinary
-GPIO unless NFC is disabled in UICR. P0.14 and P0.15 are reserved future
-physical button inputs.
+GPIO unless NFC is disabled in UICR. The physical buttons are connected to
+P0.14 and P0.15.
 
 | MCU physical pin | Port | Device pin / function | Direction | Zephyr / electrical parameter |
 |---|---|---|---|---|
 | 14 | P0.12 | LIS2DH12 SCL/SPC | Bidirectional | I2C SCL, Nordic TWIM, 100 kHz |
 | 13 | P0.11 | LIS2DH12 SDA/SDI/SDO | Bidirectional | I2C SDA, address 0x19, Nordic TWIM |
 | 12/13 MCU pins | P0.10/P0.09 | NFC1/NFC2 | Reserved | Capacitors to GND; NFC UICR handling required before GPIO use |
-| 16 | P0.14 | Physical button 1 | Input | Reserved; future deep-sleep wake input |
-| 17 | P0.15 | Physical button 2 | Input | Reserved; future deep-sleep wake input |
+| 17 | P0.14 | Physical button 1 | Input | Pull-up, active-low; usable as a wake input |
+| 18 | P0.15 | Physical button 2 | Input | Pull-up, active-low; usable as a wake input |
 | 20 | P0.17 | RGB red | Output | Common-anode LED, 510 ohm series resistor, GPIO_ACTIVE_LOW |
 | 21 | P0.18 | RGB green | Output | Common-anode LED, 100 ohm series resistor, GPIO_ACTIVE_LOW |
 | 22 | P0.19 | RGB blue | Output | Common-anode LED, 100 ohm series resistor, GPIO_ACTIVE_LOW |
@@ -76,8 +76,8 @@ dominant X lights red, dominant Y lights green, and dominant Z lights blue.
 ## Future Wake-Up Architecture
 
 INT1 is available on P0.03 and can later be configured as a LIS2DH12 activity,
-free-fall, or threshold wake source. P0.14 and P0.15 are reserved for physical
-buttons and can later be configured as wake-up inputs. The implementation can
+free-fall, or threshold wake source. The physical button inputs P0.14 and P0.15
+can also be configured as wake-up inputs. The implementation can
 combine LIS2DH12 motion thresholds and button GPIO wake events with Zephyr
 deep sleep APIs or Nordic system-off mode. NFC pins P0.09/P0.10 must remain
 NFC-reserved or have NFC disabled in UICR before GPIO reuse.
