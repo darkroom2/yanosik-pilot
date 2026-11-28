@@ -66,7 +66,7 @@ class AccelerometerTestProject(unittest.TestCase):
         self.assertTrue(hardware.is_file())
         hardware_text = hardware.read_text()
         for required in (
-            "nRF52832", "QFN48", "LIS2DH12", "LGA-12",
+            "nRF52832", "QFN48", "LIS2DH", "LGA-14",
             "P0.17", "P0.18", "P0.19", "P0.12", "P0.11",
             "0x19", "P0.04", "P0.03", "P0.14", "P0.15",
             "P0.09", "P0.10", "510", "100",

@@ -41,9 +41,11 @@ zarządzanie poborem energii.
 - **Akcelerometr LIS2DH (oznaczenie `NAI`)** — trójosiowy czujnik o niewielkim
   poborze prądu. Wykrywa ruch i wibracje pojazdu oraz może wybudzać procesor ze
   stanu uśpienia.
-- **Buzzer piezoelektryczny z układem podbijającym napięcie** — płaski głośnik
-  SMD współpracujący z tranzystorem i cewką. Układ podbija napięcie z około 3 V
-  do kilku–kilkunastu woltów, co umożliwia uzyskanie odpowiednio wysokiego dźwięku.
+- **HYG1203A — miniaturowy, pasywny przetwornik piezoelektryczny SMD (12×12×3 mm)** —
+  wymaga sterowania sygnałem prostokątnym, najlepiej o częstotliwości 4 kHz, i
+  zużywa zaledwie kilka miliamperów prądu. Jest podłączony różnicowo między
+  P0.05 i P0.06, co pozwala uzyskać efektywne 6,6 Vp-p i dobrą głośność bez
+  dodatkowych tranzystorów ani przetwornic.
 - **Rezonatory kwarcowe 32 MHz i 32,768 kHz** — stabilizują pracę radia BLE
   oraz odmierzenie czasu podczas trybu uśpienia.
 - **Antena PCB i układ dopasowania** — ścieżka antenowa umieszczona przy
@@ -65,21 +67,28 @@ zarządzanie poborem energii.
 
 | Fizyczny pin | Port nRF52 | Podłączony element |
 |---|---|---|
+| 2 | P0.00 | Linia XL1 rezonatora kwarcowego 32,768 kHz; kondensator obciążający do masy |
+| 3 | P0.01 | Linia XL2 rezonatora kwarcowego 32,768 kHz; kondensator obciążający do masy |
+| 4 | P0.02 | Nie podłączony |
+| 5 | P0.03 | Linia INT1 akcelerometru |
+| 6 | P0.04 | Linia INT2 akcelerometru |
 | 7 | P0.05 | Jeden biegun buzzera; podłączenie różnicowe / mostkowe |
 | 8 | P0.06 | Drugi biegun buzzera; podłączenie różnicowe / mostkowe |
-| 14 | P0.11 | Linia SDA akcelerometru LIS2DH12; I2C 100 kHz |
-| 13 | P0.12 | Linia SCL akcelerometru LIS2DH12; I2C 100 kHz |
-| 17 | P0.14 | Przycisk nr 1; styk zwiera do masy, wejście `INPUT_PULLUP` |
-| 18 | P0.15 | Przycisk nr 2; styk zwiera do masy, wejście `INPUT_PULLUP` |
+| 9 | P0.07 | Linia CS akcelerometru |
+| 10 | P0.08 | Linia SDO / SA0 akcelerometru |
+| 14 | P0.11 | Linia SDA akcelerometru LIS2DH; I2C 100 kHz |
+| 15 | P0.12 | Linia SCL acelerometru LIS2DH; I2C 100 kHz |
+| 16 | P0.13 | Przycisk nr 1; styk zwiera do masy, wejście `INPUT_PULLUP` |
+| 17 | P0.14 | Przycisk nr 2; styk zwiera do masy, wejście `INPUT_PULLUP` |
 | 20 | P0.17 | Czerwona dioda LED, rezystor 510 Ω; anoda wspólna, świeci przy stanie niski |
 | 21 | P0.18 | Zielony kanał diody RGB, rezystor 100 Ω; anoda wspólna, świeci przy stanie niski |
 | 22 | P0.19 | Niebieski kanał diody RGB, rezystor 100 Ω; anoda wspólna, świeci przy stanie niski |
+| 34 | - | Linia XC1 rezonatora kwarcowego 32 MHz; kondensator obciążający do masy |
+| 35 | - | Linia XC2 rezonatora kwarcowego 32 MHz; kondensator obciążający do masy |
 
 ### Elementy wymagające dalszej identyfikacji
 
-- Nie zidentyfikowano jeszcze układu podbijającego napięcie używanego przez
-  buzzer.
-- Akcelerometr LIS2DH12 działa jako I2C pod adresem `0x19`:
+- Akcelerometr LIS2DH działa jako I2C pod adresem `0x19`:
   SCL `P0.12`, SDA `P0.11`. Linia SA0/SDO jest podciągnięta do VDD_IO.
   Sygnal wybudzenia nie został jeszcze przetestowany.
 - Potwierdzone piny przycisków to P0.14 i P0.15; szczegółowe role przycisków
@@ -364,7 +373,7 @@ build lub odpowiedź HTTP 200 nie potwierdzają działania radio.
 #### `firmware/buzzer-test`
 
 Projekt `firmware/buzzer-test` używa bezpośredniego sterownika nrfx PWM 0 do
-precyzyjnego dobierania częstotliwości TAIMI TM-090918:
+precyzyjnego dobierania częstotliwości pasywnego przetwornika HYG1203A:
 
 | Funkcja | Port nRF52 | Fizyczny pin |
 |---|---|---|
@@ -479,7 +488,7 @@ curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 
 #### `firmware/accelerometer-test`
 
-Projekt `firmware/accelerometer-test` odczytuje akcelerometr LIS2DH12 przez
+Projekt `firmware/accelerometer-test` odczytuje akcelerometr LIS2DH przez
 sprzętowe I2C nRF52832 oraz steruje wspólną anodową diodą RGB. Potwierdzone
 połączenia to SCL P0.12 i SDA P0.11, adres I2C 0x19. Dominująca oś X, Y lub Z
 mapuje się odpowiednio na czerwony, zielony lub niebieski kanał.
@@ -727,7 +736,7 @@ python tools/hardware_test.py --host http://swd.local --duration 0.5
 ## Planowane prace
 
 Bieżąca lista zadań, znanych ograniczeń i kierunków dalszych badań znajduje się
-w [`TODO.md`](TODO.md). Priorytetem są testy wybudzania LIS2DH12, obsługi
+w [`TODO.md`](TODO.md). Priorytetem są testy wybudzania LIS2DH, obsługi
 INT1/INT2 oraz weryfikacja odczytów X/Y/Z na fizycznej płytce.
 
 ## Archiwum fabrycznego firmware

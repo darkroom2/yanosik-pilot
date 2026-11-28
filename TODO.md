@@ -2,15 +2,13 @@
 
 ## Namierzanie pinów akcelerometru
 
-- [x] Potwierdzić podłączenie magistrali I2C LIS2DH12:
+- [x] Potwierdzić podłączenie magistrali I2C LIS2DH:
   SCL P0.12, SDA P0.11, adres 0x19.
 - [x] Potwierdzić funkcję SA0/SDO podciągniętej do VDD_IO.
 - [x] Zweryfikować fizycznie odczyty X/Y/Z i zmianę kolorów RGB na płytce:
   dominacja X -> czerwony, Y -> zielony, Z -> niebieski.
 - [ ] Odszukać i potwierdzić sygnał wybudzenia akcelerometru, jeśli jest podłączony
   do INT1/INT2 lub innemu pinowi nRF52.
-- [ ] Dodać testy komunikacyjne sprawdzające WHO_AM_I, rejestry CTRL i odczyt XYZ
-  przez oficjalny sterownik Zephyr.
 
 ## Przyciski
 
@@ -20,10 +18,9 @@
 ## Buzzer
 
 - [x] Potwierdzić fizyczne mapowanie buzzera: pin 7 -> P0.05, pin 8 -> P0.06.
-- [ ] Zidentyfikować układ podbijania napięcia używany przez buzzer.
 - [ ] Zweryfikować sprzętowo regulację 3000–5000 Hz, przeciwfazę P0.05/P0.06,
   H0H1 oraz kolorami LED zakresy częstotliwości projektu `firmware/buzzer-test`.
-- [ ] Wyznaczyć rezonans urządzenia TM-090918 i zapisać potwierdzoną częstotliwość
+- [ ] Wyznaczyć rezonans urządzenia HYG1203A i zapisać potwierdzoną częstotliwość
   oraz wynik pomiaru decybelomierzem.
 - [ ] Dodać dwukierunkową sygnalizację stanów przez buzzer i diodę/LED:
   zdarzenia wychodzące z pilota do Home Assistant oraz potwierdzenia lub stany

@@ -1,6 +1,6 @@
-# Zephyr LIS2DH12 Accelerometer Test
+# Zephyr LIS2DH Accelerometer Test
 
-Projekt odczytuje LIS2DH12TR przez sprzętowe I2C:
+Projekt odczytuje LIS2DH przez sprzętowe I2C:
 SCL P0.12, SDA P0.11, adres urządzenia 0x19.
 Piny P0.05 i P0.06 buzzera oraz pozostałe GPIO nie są konfigurowane przez aplikację.
 
@@ -37,7 +37,7 @@ curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 
 ## Działanie testowe
 
-Aplikacja ustawia ODR LIS2DH12 na 50 Hz i co 150 ms odczytuje
+Aplikacja ustawia ODR LIS2DH na 50 Hz i co 150 ms odczytuje
 `SENSOR_CHAN_ACCEL_XYZ`. Wartości X, Y i Z są logowane przez SEGGER RTT.
 Oś o największej bezwzględnej składowej steruje diodą: X czerwony, Y zielony,
 Z niebieski. Dioda RGB jest wspólnej anody i kanały są aktywne stanem niskim.

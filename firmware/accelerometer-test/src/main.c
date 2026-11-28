@@ -37,7 +37,7 @@ int main(void)
 
 	const struct device *accel = DEVICE_DT_GET(DT_ALIAS(accel0));
 	if (!device_is_ready(accel)) {
-		LOG_ERR("LIS2DH12TR (0x19) nie jest gotowy!");
+		LOG_ERR("LIS2DH (0x19) nie jest gotowy!");
 		set_rgb(true, false, false);
 		return 0;
 	}
@@ -48,10 +48,10 @@ int main(void)
 	};
 	if (sensor_attr_set(accel, SENSOR_CHAN_ACCEL_XYZ,
 			    SENSOR_ATTR_SAMPLING_FREQUENCY, &odr) != 0) {
-		LOG_WRN("Nie udalo sie ustawic ODR LIS2DH12 na 50 Hz");
+		LOG_WRN("Nie udalo sie ustawic ODR LIS2DH na 50 Hz");
 	}
 
-	LOG_INF("LIS2DH12TR zainicjalizowany na I2C0 "
+	LOG_INF("LIS2DH zainicjalizowany na I2C0 "
 		"(SCL=P0.12, SDA=P0.11, ADDR=0x19)");
 
 	struct sensor_value val[3];
@@ -79,10 +79,10 @@ int main(void)
 					set_rgb(false, false, true);
 				}
 			} else {
-				LOG_WRN("Blad odczytu osi I2C z LIS2DH12");
+				LOG_WRN("Blad odczytu osi I2C z LIS2DH");
 			}
 		} else {
-			LOG_WRN("Blad odczytu probki I2C z LIS2DH12");
+			LOG_WRN("Blad odczytu probki I2C z LIS2DH");
 		}
 
 		k_msleep(150);
