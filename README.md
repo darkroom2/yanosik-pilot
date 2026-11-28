@@ -25,6 +25,7 @@ Projekt zawiera narzędzia do:
     - [`firmware/ble-zephyr`](#firmwareble-zephyr)
      - [`firmware/zephyr-template`](#firmwarezephyr-template)
      - [`firmware/accelerometer-test`](#firmwareaccelerometer-test)
+     - [`firmware/accelerometer-wake-test`](#firmwareaccelerometer-wake-test)
 - [Testowanie firmware](#testowanie-firmware)
 - [Test mapowania sprzętu](#test-mapowania-sprzętu)
 - [Planowane prace](#planowane-prace)
@@ -392,6 +393,7 @@ co 50 Hz w zakresie 3000–5000 Hz. Aktualna częstotliwość jest wypisywana pr
 `printk()`. Niebieski LED oznacza zakres poniżej 3900 Hz, zielony zakres
 3900–4100 Hz, a czerwony zakres powyżej 4100 Hz. Przy limicie wszystkie kanały
 LED świecą krótko jako biały akcent.
+Optimum dla pasywnego przetwornika HYG1203A to `4000 Hz`.
 
 Węzeł `&pwm0` jest wyłączony w overlay; nrfx PWM steruje rejestrem PWM0 bez
 konfliktu ze sterownikiem Zephyr.
@@ -417,7 +419,8 @@ curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/buzzer-test/.pi
 curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 ```
 
-Potwierdzenie sprzętowe wymaga fizycznego usłyszenia tonu około 2 kHz przez
+Potwierdzenie sprzętowe wymaga fizycznego usłyszenia tonu optymalnego dla
+buzzera, czyli około `4000 Hz`, przez
 500 ms i ciszy przez około 1000 ms po zresetowaniu nRF52. Pomyślna kompilacja
 lub odpowiedź HTTP 200 potwierdzają tylko kompilację i transfer pliku.
 
@@ -485,6 +488,23 @@ curl -X POST "http://swd.local/set_swd?cmd=erase_all"
 curl -F "flash_up_file_offset=0" -F "flash_file_direct=@firmware/zephyr-template/.pio/build/nrf52_dk/zephyr/zephyr.bin" http://swd.local/flash_file_direct
 curl -X POST "http://swd.local/set_swd?cmd=set_reset"
 ```
+
+#### `firmware/accelerometer-wake-test`
+
+Projekt `firmware/accelerometer-wake-test` używa LIS2DH/LIS2DH12 w trybie
+Sleep-to-Wake oraz Stream-to-FIFO, aby zachować początki ruchu przy minimalnym
+poborze w System OFF. P0.03 jest źródłem SENSE HIGH nRF52832; po wybudzeniu
+bufor jest odczytywany przez RTT, ponownie uzbrajany i czujnik może wrócić
+samodzielnie do 10 Hz Low-Power.
+
+Zbuduj projekt:
+
+```powershell
+uv run pio run --project-dir firmware\accelerometer-wake-test -e nrf52_dk
+```
+
+Plik BIN i urządzenia wejścia/wyjścia są opisane w
+[README.md projektu](firmware/accelerometer-wake-test/README.md).
 
 #### `firmware/accelerometer-test`
 

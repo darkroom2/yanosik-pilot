@@ -5,8 +5,8 @@
 
 #define BUZZER_A_PIN          5
 #define BUZZER_B_PIN          6
-#define BUTTON_PLUS_PIN       14
-#define BUTTON_MINUS_PIN      15
+#define BUTTON_PLUS_PIN       13
+#define BUTTON_MINUS_PIN      14
 #define LED_RED_PIN           17
 #define LED_GREEN_PIN         18
 #define LED_BLUE_PIN          19

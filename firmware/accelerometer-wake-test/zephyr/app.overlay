@@ -1,0 +1,52 @@
+/ {
+	aliases {
+		led-red = &led_r;
+		led-green = &led_g;
+		led-blue = &led_b;
+		int1 = &int1;
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		led_r: led-r {
+			gpios = <&gpio0 17 GPIO_ACTIVE_LOW>;
+		};
+		led_g: led-g {
+			gpios = <&gpio0 18 GPIO_ACTIVE_LOW>;
+		};
+		led_b: led-b {
+			gpios = <&gpio0 19 GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	int1: int1 {
+		compatible = "gpio-input";
+		gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&pinctrl {
+	i2c0_default: i2c0_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SCL, 0, 12)>,
+				<NRF_PSEL(TWIM_SDA, 0, 11)>;
+		};
+	};
+
+	i2c0_sleep: i2c0_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SCL, 0, 12)>,
+				<NRF_PSEL(TWIM_SDA, 0, 11)>;
+			low-power-enable;
+		};
+	};
+};
+
+&i2c0 {
+	status = "okay";
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-1 = <&i2c0_sleep>;
+	pinctrl-names = "default", "sleep";
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+};

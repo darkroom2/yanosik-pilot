@@ -9,6 +9,10 @@
   dominacja X -> czerwony, Y -> zielony, Z -> niebieski.
 - [ ] Odszukać i potwierdzić sygnał wybudzenia akcelerometru, jeśli jest podłączony
   do INT1/INT2 lub innemu pinowi nRF52.
+- [ ] Zweryfikować sprzętowo SYSTEM OFF i wybudzanie ruchem w projekcie
+  `firmware/accelerometer-wake-test`: zmierzyć pobór całej płytki i potwierdzić,
+  że ruch podnosi P0.03 i wybudza nRF52832, oraz sprawdzić odczyt historii FIFO
+  przez RTT i ponowne uzbrojenie Stream-to-FIFO.
 
 ## Przyciski
 
